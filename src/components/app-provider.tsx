@@ -16,9 +16,11 @@ import type {
   Question,
   Quiz,
   QuizState,
+  Topic,
 } from "@/lib/quiz-types";
 
-const STORAGE_KEY = "alphaquiz-state-v1";
+const STORAGE_KEY = "alphaquiz-state-v2";
+const LEGACY_STORAGE_KEY = "alphaquiz-state-v1";
 
 type AppContextValue = {
   state: QuizState;
@@ -28,7 +30,7 @@ type AppContextValue = {
   createQuiz: () => string;
   updateQuiz: (id: string, patch: Partial<Quiz>) => void;
   deleteQuiz: (id: string) => void;
-  createQuestion: (categoryId?: string) => string;
+  createQuestion: (categoryId?: string, topicId?: string) => string;
   updateQuestion: (id: string, patch: Partial<Question>) => void;
   deleteQuestion: (id: string) => void;
   addQuestionToQuiz: (quizId: string, questionId: string) => void;
@@ -36,6 +38,9 @@ type AppContextValue = {
   createCategory: (name: string) => string;
   updateCategory: (id: string, patch: Partial<Category>) => void;
   deleteCategory: (id: string) => void;
+  createTopic: (categoryId: string, name: string) => string;
+  updateTopic: (id: string, patch: Partial<Topic>) => void;
+  deleteTopic: (id: string) => void;
   importQuestions: (questions: Question[], categories: Category[]) => number;
   recordExport: (record: Omit<ExportRecord, "id" | "createdAt">) => void;
   resetDemo: () => void;
@@ -45,6 +50,68 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 function makeId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
+}
+
+function normalizeState(stored: Partial<QuizState>): QuizState {
+  const categories = Array.isArray(stored.categories)
+    ? stored.categories
+    : seedState.categories;
+  const sourceTopics = Array.isArray(stored.topics)
+    ? stored.topics
+    : seedState.topics.filter((topic) =>
+        categories.some((category) => category.id === topic.categoryId),
+      );
+  const topics = [...sourceTopics];
+
+  for (const category of categories) {
+    if (!topics.some((topic) => topic.categoryId === category.id)) {
+      topics.push({
+        id: `topic-${category.id}-allgemein`,
+        categoryId: category.id,
+        name: "Allgemein",
+      });
+    }
+  }
+
+  const questions = (stored.questions ?? seedState.questions).map(
+    (question) => ({
+      ...question,
+      topicId:
+        question.topicId &&
+        topics.some(
+          (topic) =>
+            topic.id === question.topicId &&
+            topic.categoryId === question.categoryId,
+        )
+          ? question.topicId
+          : (() => {
+              const seedTopicId = seedState.questions.find(
+                (seedQuestion) => seedQuestion.id === question.id,
+              )?.topicId;
+              return (
+                topics.find((topic) => topic.id === seedTopicId)?.id ??
+                topics.find(
+                  (topic) => topic.categoryId === question.categoryId,
+                )?.id ??
+                ""
+              );
+            })(),
+    }),
+  );
+  const quizzes = (stored.quizzes ?? seedState.quizzes).map((quiz) => ({
+    ...quiz,
+    passPercentage: quiz.passPercentage ?? 70,
+    scoringMode: quiz.scoringMode ?? "combined",
+    topicPassPercentages: quiz.topicPassPercentages ?? {},
+  }));
+
+  return {
+    categories,
+    topics,
+    questions,
+    quizzes,
+    exports: stored.exports ?? [],
+  };
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -57,10 +124,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     let nextState: QuizState | null = null;
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored) nextState = JSON.parse(stored) as QuizState;
+      const stored =
+        window.localStorage.getItem(STORAGE_KEY) ??
+        window.localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (stored) nextState = normalizeState(JSON.parse(stored));
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
     }
     const timer = window.setTimeout(() => {
       if (cancelled) return;
@@ -95,6 +165,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           categoryId: current.categories[0]?.id ?? "",
           status: "draft",
           questionIds: [],
+          passPercentage: 70,
+          scoringMode: "combined",
+          topicPassPercentages: {},
           updatedAt: new Date().toISOString(),
         },
         ...current.quizzes,
@@ -122,7 +195,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
-  const createQuestion = useCallback((categoryId?: string) => {
+  const createQuestion = useCallback((categoryId?: string, topicId?: string) => {
     const id = makeId("question");
     setState((current) => ({
       ...current,
@@ -134,6 +207,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           description: "",
           type: "single",
           categoryId: categoryId ?? current.categories[0]?.id ?? "",
+          topicId:
+            topicId ??
+            current.topics.find(
+              (topic) =>
+                topic.categoryId ===
+                (categoryId ?? current.categories[0]?.id ?? ""),
+            )?.id ??
+            "",
           points: 1,
           shuffle: true,
           answers: [
@@ -204,11 +285,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const createCategory = useCallback((name: string) => {
     const id = makeId("category");
+    const topicId = makeId("topic");
     setState((current) => ({
       ...current,
       categories: [
         ...current.categories,
         { id, name, color: "#dd6b4d" },
+      ],
+      topics: [
+        ...current.topics,
+        { id: topicId, categoryId: id, name: "Allgemein" },
       ],
     }));
     return id;
@@ -239,6 +325,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         categories: current.categories.filter(
           (category) => category.id !== id,
         ),
+        topics: current.topics.filter((topic) => topic.categoryId !== id),
+      };
+    });
+  }, []);
+
+  const createTopic = useCallback((categoryId: string, name: string) => {
+    const id = makeId("topic");
+    setState((current) => ({
+      ...current,
+      topics: [...current.topics, { id, categoryId, name }],
+    }));
+    return id;
+  }, []);
+
+  const updateTopic = useCallback((id: string, patch: Partial<Topic>) => {
+    setState((current) => ({
+      ...current,
+      topics: current.topics.map((topic) =>
+        topic.id === id ? { ...topic, ...patch } : topic,
+      ),
+    }));
+  }, []);
+
+  const deleteTopic = useCallback((id: string) => {
+    setState((current) => {
+      if (current.questions.some((question) => question.topicId === id)) {
+        return current;
+      }
+      return {
+        ...current,
+        topics: current.topics.filter((topic) => topic.id !== id),
+        quizzes: current.quizzes.map((quiz) => {
+          const topicPassPercentages = { ...quiz.topicPassPercentages };
+          delete topicPassPercentages[id];
+          return { ...quiz, topicPassPercentages };
+        }),
       };
     });
   }, []);
@@ -247,6 +369,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (questions: Question[], categories: Category[]) => {
       setState((current) => {
         const nextCategories = [...current.categories];
+        const nextTopics = [...current.topics];
         const categoryMap = new Map<string, string>();
         for (const category of categories) {
           const existing = nextCategories.find(
@@ -271,21 +394,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             });
             return categoryId;
           })();
+        for (const category of nextCategories) {
+          if (!nextTopics.some((topic) => topic.categoryId === category.id)) {
+            nextTopics.push({
+              id: makeId("topic"),
+              categoryId: category.id,
+              name: "Allgemein",
+            });
+          }
+        }
         return {
           ...current,
           categories: nextCategories,
+          topics: nextTopics,
           questions: [
             ...current.questions,
-            ...questions.map((question) => ({
-              ...question,
-              id: makeId("question"),
-              categoryId:
-                categoryMap.get(question.categoryId) ?? fallbackCategoryId,
-              answers: question.answers.map((answer) => ({
-                ...answer,
-                id: makeId("answer"),
-              })),
-            })),
+            ...questions.map((question) => {
+              const categoryId =
+                categoryMap.get(question.categoryId) ?? fallbackCategoryId;
+              return {
+                ...question,
+                id: makeId("question"),
+                categoryId,
+                topicId:
+                  nextTopics.find((topic) => topic.categoryId === categoryId)
+                    ?.id ?? "",
+                answers: question.answers.map((answer) => ({
+                  ...answer,
+                  id: makeId("answer"),
+                })),
+              };
+            }),
           ],
         };
       });
@@ -317,6 +456,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const resetDemo = useCallback(() => {
     setState(seedState);
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   }, []);
 
   const value = useMemo<AppContextValue>(
@@ -336,6 +476,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createCategory,
       updateCategory,
       deleteCategory,
+      createTopic,
+      updateTopic,
+      deleteTopic,
       importQuestions,
       recordExport,
       resetDemo,
@@ -356,6 +499,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createCategory,
       updateCategory,
       deleteCategory,
+      createTopic,
+      updateTopic,
+      deleteTopic,
       importQuestions,
       recordExport,
       resetDemo,

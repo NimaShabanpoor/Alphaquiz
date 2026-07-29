@@ -60,8 +60,9 @@ export async function POST(request: Request) {
 
   try {
     const state = (await request.json()) as QuizState;
+    await upsert(current.client, "categories", state.categories);
+    await upsert(current.client, "topics", state.topics);
     await Promise.all([
-      upsert(current.client, "categories", state.categories),
       upsert(
         current.client,
         "questions",
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
           description: question.description,
           type: question.type,
           categoryId: question.categoryId,
+          topicId: question.topicId,
           points: question.points,
           shuffle: question.shuffle,
         })),
@@ -84,6 +86,9 @@ export async function POST(request: Request) {
           description: quiz.description,
           categoryId: quiz.categoryId,
           status: quiz.status,
+          passPercentage: quiz.passPercentage,
+          scoringMode: quiz.scoringMode,
+          topicPassPercentages: quiz.topicPassPercentages,
           updatedAt: quiz.updatedAt,
         })),
       ),

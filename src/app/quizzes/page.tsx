@@ -53,7 +53,11 @@ export default function QuizzesPage() {
                     <strong>{quiz.title}</strong>
                     <small>
                       {quiz.questionIds.length} Fragen ·{" "}
-                      {category?.name ?? "Ohne Kategorie"} · zuletzt{" "}
+                      {category?.name ?? "Ohne Kategorie"} ·{" "}
+                      {quiz.scoringMode === "per-topic"
+                        ? "jedes Thema bestehen"
+                        : `gesamt ab ${quiz.passPercentage} %`}{" "}
+                      · zuletzt{" "}
                       {new Date(quiz.updatedAt).toLocaleDateString("de-CH")}
                     </small>
                   </span>

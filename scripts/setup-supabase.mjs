@@ -57,6 +57,7 @@ try {
     where table_schema = 'public'
       and table_name in (
         'categories',
+        'topics',
         'questions',
         'answers',
         'quizzes',

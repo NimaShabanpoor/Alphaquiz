@@ -1,7 +1,7 @@
 .filters {
   display: grid;
   gap: var(--sp-3);
-  grid-template-columns: 1fr 230px;
+  grid-template-columns: 1fr 210px 210px;
   margin-bottom: var(--sp-4);
 }
 
@@ -137,12 +137,31 @@
 .formRow {
   display: grid;
   gap: var(--sp-3);
-  grid-template-columns: 1fr 1fr 0.5fr;
+  grid-template-columns: 1fr 1fr 1fr 0.5fr;
 }
 
 .answers {
   display: grid;
   gap: var(--sp-2);
+}
+
+.addAnswer {
+  align-items: center;
+  background: var(--amber-tint);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-ctl);
+  color: var(--amber-deep);
+  display: flex;
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  gap: var(--sp-2);
+  justify-content: center;
+  min-height: var(--h-ctl);
+}
+
+.addAnswer svg {
+  height: 13px;
+  width: 13px;
 }
 
 .answer {

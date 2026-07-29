@@ -148,6 +148,7 @@ function parseAccess(buffer: Buffer) {
       type,
       categoryId:
         categoryBySource.get(categorySource) ?? categories[0].id,
+      topicId: "",
       points: Number(pick(row, ["Punkte", "Points"])) || 1,
       shuffle: true,
       answers:
@@ -214,6 +215,7 @@ function parseCsv(source: string) {
       description: get("beschreibung", "description"),
       type: (get("typ", "type") as QuestionType) || "single",
       categoryId: category.id,
+      topicId: "",
       points: Number(get("punkte", "points")) || 1,
       shuffle: true,
       answers: (answerTexts.length ? answerTexts : [""]).map(
