@@ -147,4 +147,19 @@ export const seedState: QuizState = {
     },
   ],
   exports: [],
+  examPublications: [
+    {
+      id: "exam-excel-demo",
+      quizId: "quiz-excel",
+      slug: "excel-grundlagen-demo",
+      mode: "closed",
+      timeLimit: 45,
+      maxViolations: 2,
+      active: true,
+      sendResults: true,
+      createdAt: "2026-07-29T09:00:00.000Z",
+    },
+  ],
+  examAttempts: [],
+  examEvents: [],
 };

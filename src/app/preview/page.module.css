@@ -217,3 +217,25 @@
 .result > button {
   margin-top: var(--sp-2);
 }
+.questionImage {
+  background: #f6f7f7;
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  margin: var(--sp-4) 0;
+  overflow: hidden;
+  text-align: center;
+}
+
+.questionImage img {
+  height: auto;
+  max-height: 380px;
+  object-fit: contain;
+  width: 100%;
+}
+
+.questionImage figcaption {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  padding: var(--sp-2) var(--sp-3);
+}

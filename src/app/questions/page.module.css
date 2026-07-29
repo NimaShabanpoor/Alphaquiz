@@ -63,9 +63,16 @@
   font-family: var(--font-serif);
   font-size: 12px;
   font-weight: 600;
-  height: 26px;
+  height: 38px;
   justify-content: center;
-  width: 26px;
+  overflow: hidden;
+  width: 48px;
+}
+
+.mark img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
 }
 
 .copy {
@@ -138,6 +145,13 @@
   display: grid;
   gap: var(--sp-3);
   grid-template-columns: 1fr 1fr 1fr 0.5fr;
+}
+
+.description {
+  height: auto;
+  min-height: 62px;
+  padding-block: var(--sp-2);
+  resize: vertical;
 }
 
 .answers {

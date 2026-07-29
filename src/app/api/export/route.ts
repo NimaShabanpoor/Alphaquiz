@@ -1,6 +1,8 @@
 import {
+  AlignmentType,
   Document,
   HeadingLevel,
+  ImageRun,
   Packer,
   Paragraph,
   TextRun,
@@ -18,6 +20,17 @@ type ExportPayload = {
   questions: Question[];
   format: ExportFormat;
 };
+
+function decodeImage(dataUrl?: string) {
+  const match = dataUrl?.match(
+    /^data:image\/(png|jpeg);base64,([a-z0-9+/=\s]+)$/i,
+  );
+  if (!match) return null;
+  return {
+    bytes: Buffer.from(match[2], "base64"),
+    type: match[1].toLowerCase() === "jpeg" ? ("jpg" as const) : ("png" as const),
+  };
+}
 
 function safeName(title: string) {
   return (
@@ -68,6 +81,31 @@ async function createDocx(quiz: Quiz, questions: Question[]) {
           ],
         }),
       );
+    }
+    const image = decodeImage(question.image?.dataUrl);
+    if (image) {
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new ImageRun({
+              data: image.bytes,
+              type: image.type,
+              transformation: { width: 480, height: 270 },
+            }),
+          ],
+        }),
+      );
+      if (question.image?.alt) {
+        children.push(
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({ text: question.image.alt, italics: true }),
+            ],
+          }),
+        );
+      }
     }
     if (question.type === "text") {
       children.push(new Paragraph({ text: "Antwort: ____________________" }));
@@ -142,8 +180,31 @@ async function createPdf(quiz: Quiz, questions: Question[]) {
   addLine(quiz.description || "Microsoft Forms Schnellimport");
   y -= 18;
 
-  questions.forEach((question, index) => {
+  for (const [index, question] of questions.entries()) {
     addLine(`${index + 1}. ${question.title}`, { size: 13, strong: true });
+    const image = decodeImage(question.image?.dataUrl);
+    if (image) {
+      const embedded =
+        image.type === "png"
+          ? await pdf.embedPng(image.bytes)
+          : await pdf.embedJpg(image.bytes);
+      const scale = Math.min(480 / embedded.width, 220 / embedded.height, 1);
+      const width = embedded.width * scale;
+      const height = embedded.height * scale;
+      if (y - height < 55) {
+        page = pdf.addPage([595, 842]);
+        y = 790;
+      }
+      y -= height;
+      page.drawImage(embedded, {
+        x: 46,
+        y,
+        width,
+        height,
+      });
+      y -= 8;
+      if (question.image?.alt) addLine(question.image.alt, { indent: 14 });
+    }
     if (question.description) addLine(question.description);
     if (question.type === "text") {
       addLine("Antwort: ____________________", { indent: 14 });
@@ -155,7 +216,7 @@ async function createPdf(quiz: Quiz, questions: Question[]) {
       );
     }
     y -= 14;
-  });
+  }
 
   return Buffer.from(await pdf.save());
 }
@@ -167,6 +228,7 @@ function createCsv(quiz: Quiz, questions: Question[]) {
       "Frage",
       "Typ",
       "Punkte",
+      "Bild",
       "Antworten",
       "Richtige Antworten",
     ],
@@ -175,6 +237,7 @@ function createCsv(quiz: Quiz, questions: Question[]) {
       question.title,
       questionTypeLabels[question.type],
       question.points,
+      question.image?.fileName ?? "",
       question.answers.map((answer) => answer.text).join(" | "),
       question.answers
         .filter((answer) => answer.correct)

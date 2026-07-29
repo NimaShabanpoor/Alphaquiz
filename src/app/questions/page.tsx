@@ -1,8 +1,10 @@
 "use client";
 
 import { Check, Plus, Search, Trash2, X } from "lucide-react";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useQuizApp } from "@/components/app-provider";
+import { QuestionImageField } from "@/components/question-image-field";
 import { EmptyState, PageHeader, ui } from "@/components/ui";
 import type { QuestionType } from "@/lib/quiz-types";
 import { questionTypeLabels } from "@/lib/quiz-types";
@@ -129,14 +131,24 @@ export default function QuestionsPage() {
                   className={styles.mark}
                   style={{ background: category?.color }}
                 >
-                  {category?.name.slice(0, 1) ?? "?"}
+                  {question.image ? (
+                    <Image
+                      alt={question.image.alt || ""}
+                      height={38}
+                      src={question.image.dataUrl}
+                      unoptimized
+                      width={48}
+                    />
+                  ) : (
+                    (category?.name.slice(0, 1) ?? "?")
+                  )}
                 </span>
                 <span className={styles.copy}>
                   <strong>{question.title}</strong>
                   <small>
                     {questionTypeLabels[question.type]} ·{" "}
                     {question.answers.length} Antworten · {question.points}{" "}
-                    Punkte
+                    Punkte {question.image ? "· mit Bild" : ""}
                   </small>
                 </span>
                 <span className={ui.pill}>
@@ -193,6 +205,23 @@ export default function QuestionsPage() {
                   value={selected.title}
                 />
               </label>
+              <label className={ui.field}>
+                <span>Beschreibung (optional)</span>
+                <textarea
+                  className={`${ui.input} ${styles.description}`}
+                  onChange={(event) =>
+                    updateQuestion(selected.id, {
+                      description: event.target.value,
+                    })
+                  }
+                  value={selected.description}
+                />
+              </label>
+              <QuestionImageField
+                image={selected.image}
+                onChange={(image) => updateQuestion(selected.id, { image })}
+                onError={showToast}
+              />
               <div className={styles.formRow}>
                 <label className={ui.field}>
                   <span>Format</span>

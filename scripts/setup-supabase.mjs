@@ -58,6 +58,9 @@ try {
       and table_name in (
         'categories',
         'topics',
+        'exam_publications',
+        'exam_attempts',
+        'exam_events',
         'questions',
         'answers',
         'quizzes',

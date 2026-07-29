@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  BellRing,
   CircleHelp,
+  ClipboardCheck,
   Eye,
   FileInput,
   FileOutput,
@@ -20,14 +22,41 @@ import { useQuizApp } from "@/components/app-provider";
 import styles from "./app-shell.module.css";
 
 const navigation = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/quizzes", label: "Quizzes", icon: ListChecks },
-  { href: "/questions", label: "Fragenpool", icon: CircleHelp },
-  { href: "/categories", label: "Kategorien", icon: Folder },
-  { href: "/import", label: "Import", icon: FileInput },
-  { href: "/export", label: "Export", icon: FileOutput },
-  { href: "/preview", label: "Vorschau", icon: Eye },
-  { href: "/settings", label: "Einstellungen", icon: Settings },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, groupStart: false },
+  { href: "/quizzes", label: "Quizzes", icon: ListChecks, groupStart: false },
+  {
+    href: "/exams",
+    label: "Prüfungen",
+    icon: ClipboardCheck,
+    groupStart: false,
+  },
+  {
+    href: "/exam-activity",
+    label: "Prüfungsaktivität",
+    icon: BellRing,
+    groupStart: false,
+  },
+  {
+    href: "/questions",
+    label: "Fragenpool",
+    icon: CircleHelp,
+    groupStart: true,
+  },
+  {
+    href: "/categories",
+    label: "Kategorien",
+    icon: Folder,
+    groupStart: false,
+  },
+  { href: "/import", label: "Import", icon: FileInput, groupStart: true },
+  { href: "/export", label: "Export", icon: FileOutput, groupStart: false },
+  { href: "/preview", label: "Vorschau", icon: Eye, groupStart: false },
+  {
+    href: "/settings",
+    label: "Einstellungen",
+    icon: Settings,
+    groupStart: true,
+  },
 ] as const;
 
 function Brand() {
@@ -55,7 +84,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const { toast } = useQuizApp();
+  const { state, toast } = useQuizApp();
+  const violationCount = state.examEvents.filter(
+    (event) =>
+      event.type === "tab-hidden" || event.type === "fullscreen-exit",
+  ).length;
 
   async function logout() {
     if (loggingOut) return;
@@ -69,7 +102,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }
 
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname.startsWith("/exam/")) {
     return <>{children}</>;
   }
 
@@ -90,7 +123,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <aside className={styles.sidebar} data-open={open}>
         <Brand />
         <nav aria-label="Hauptnavigation" className={styles.nav}>
-          {navigation.map((item, index) => {
+          {navigation.map((item) => {
             const Icon = item.icon;
             const active =
               item.href === "/"
@@ -98,7 +131,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 : pathname.startsWith(item.href);
             return (
               <div key={item.href}>
-                {index === 4 || index === 7 ? <hr /> : null}
+                {item.groupStart ? <hr /> : null}
                 <Link
                   aria-current={active ? "page" : undefined}
                   className={styles.navLink}
@@ -107,7 +140,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   onClick={() => setOpen(false)}
                 >
                   <Icon aria-hidden="true" />
-                  {item.label}
+                  <span>{item.label}</span>
+                  {item.href === "/exam-activity" && violationCount ? (
+                    <span className={styles.navBadge}>{violationCount}</span>
+                  ) : null}
                 </Link>
               </div>
             );

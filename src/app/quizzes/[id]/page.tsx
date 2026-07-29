@@ -3,9 +3,12 @@
 import {
   ArrowLeft,
   Check,
+  ChevronRight,
   Eye,
   FileOutput,
+  FolderPlus,
   GripVertical,
+  ImageIcon,
   Plus,
   Save,
   Search,
@@ -14,9 +17,11 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useQuizApp } from "@/components/app-provider";
+import { QuestionImageField } from "@/components/question-image-field";
 import { EmptyState, PageHeader, ui } from "@/components/ui";
 import type {
   Answer,
@@ -74,6 +79,7 @@ export default function QuizEditorPage() {
     state,
     updateQuiz,
     createQuestion,
+    createTopic,
     updateQuestion,
     addQuestionToQuiz,
     removeQuestionFromQuiz,
@@ -91,6 +97,10 @@ export default function QuizEditorPage() {
   const [showPool, setShowPool] = useState(false);
   const [poolQuery, setPoolQuery] = useState("");
   const [poolTopicId, setPoolTopicId] = useState("all");
+  const [poolTargetTopicId, setPoolTargetTopicId] = useState("");
+  const [collapsedTopics, setCollapsedTopics] = useState<string[]>([]);
+  const [showTopicCreator, setShowTopicCreator] = useState(false);
+  const [newTopicName, setNewTopicName] = useState("");
 
   if (!quiz) {
     return (
@@ -139,11 +149,30 @@ export default function QuizEditorPage() {
     const questionId = createQuestion(
       quiz.categoryId,
       topicId ??
-        (poolTopicId === "all" ? categoryTopics[0]?.id : poolTopicId),
+        (poolTargetTopicId ||
+          (poolTopicId === "all" ? categoryTopics[0]?.id : poolTopicId)),
     );
     addQuestionToQuiz(quiz.id, questionId);
     setActiveId(questionId);
     setShowPool(false);
+  }
+
+  function openPoolForTopic(topicId: string) {
+    setPoolTopicId("all");
+    setPoolTargetTopicId(topicId);
+    setShowPool(true);
+  }
+
+  function addTopic() {
+    const name = newTopicName.trim();
+    if (!name || !quiz) return;
+    const topicId = createTopic(quiz.categoryId, name);
+    setNewTopicName("");
+    setShowTopicCreator(false);
+    setCollapsedTopics((current) =>
+      current.filter((currentId) => currentId !== topicId),
+    );
+    showToast(`Unterkategorie „${name}“ wurde erstellt.`);
   }
 
   function patchQuestion(patch: Partial<Question>) {
@@ -360,28 +389,109 @@ export default function QuizEditorPage() {
 
       <section className={styles.editorGrid}>
         <aside className={`${ui.card} ${styles.questionList}`}>
-          {quizQuestions.map((question, index) => (
+          <div className={styles.topicListHead}>
+            <span>Unterkategorien</span>
             <button
-              className={styles.questionItem}
-              data-active={question.id === activeQuestion?.id}
-              key={question.id}
-              onClick={() => setActiveId(question.id)}
+              aria-label="Unterkategorie erstellen"
+              onClick={() => setShowTopicCreator((current) => !current)}
               type="button"
             >
-              <span>{index + 1}</span>
-              <span>
-                <strong>{question.title || "Unbenannte Frage"}</strong>
-                <small>
-                  {state.topics.find((topic) => topic.id === question.topicId)
-                    ?.name ?? "Ohne Thema"}{" "}
-                  · {question.points} P.
-                </small>
-              </span>
+              <FolderPlus aria-hidden="true" />
             </button>
-          ))}
+          </div>
+          {showTopicCreator ? (
+            <div className={styles.topicCreator}>
+              <input
+                autoFocus
+                onChange={(event) => setNewTopicName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") addTopic();
+                  if (event.key === "Escape") setShowTopicCreator(false);
+                }}
+                placeholder="z. B. Grundlagen"
+                value={newTopicName}
+              />
+              <button
+                disabled={!newTopicName.trim()}
+                onClick={addTopic}
+                type="button"
+              >
+                Anlegen
+              </button>
+            </div>
+          ) : null}
+          {categoryTopics.map((topic) => {
+            const topicQuestions = quizQuestions.filter(
+              (question) => question.topicId === topic.id,
+            );
+            const collapsed = collapsedTopics.includes(topic.id);
+            return (
+              <div className={styles.topicGroup} key={topic.id}>
+                <button
+                  aria-expanded={!collapsed}
+                  className={styles.topicHeader}
+                  onClick={() =>
+                    setCollapsedTopics((current) =>
+                      collapsed
+                        ? current.filter((id) => id !== topic.id)
+                        : [...current, topic.id],
+                    )
+                  }
+                  type="button"
+                >
+                  <ChevronRight aria-hidden="true" />
+                  <span>
+                    <strong>{topic.name}</strong>
+                    <small>
+                      {topicQuestions.length}{" "}
+                      {topicQuestions.length === 1 ? "Frage" : "Fragen"}
+                    </small>
+                  </span>
+                </button>
+                {!collapsed ? (
+                  <div className={styles.topicQuestions}>
+                    {topicQuestions.map((question) => (
+                      <button
+                        className={styles.questionItem}
+                        data-active={question.id === activeQuestion?.id}
+                        key={question.id}
+                        onClick={() => setActiveId(question.id)}
+                        type="button"
+                      >
+                        <span>
+                          {quizQuestions.indexOf(question) + 1}
+                        </span>
+                        <span>
+                          <strong>
+                            {question.title || "Unbenannte Frage"}
+                          </strong>
+                          <small>
+                            {question.image ? (
+                              <ImageIcon aria-label="Mit Bild" />
+                            ) : null}
+                            {question.points} P.
+                          </small>
+                        </span>
+                      </button>
+                    ))}
+                    <button
+                      className={styles.topicAdd}
+                      onClick={() => openPoolForTopic(topic.id)}
+                      type="button"
+                    >
+                      <Plus aria-hidden="true" /> Frage zuordnen
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
           <button
             className={styles.addQuestion}
-            onClick={() => setShowPool(true)}
+            onClick={() => {
+              setPoolTargetTopicId(activeQuestion?.topicId ?? "");
+              setShowPool(true);
+            }}
             type="button"
           >
             <Plus aria-hidden="true" />
@@ -450,6 +560,12 @@ export default function QuizEditorPage() {
                     value={activeQuestion.description}
                   />
                 </label>
+
+                <QuestionImageField
+                  image={activeQuestion.image}
+                  onChange={(image) => patchQuestion({ image })}
+                  onError={showToast}
+                />
 
                 <div className={ui.field}>
                   <label>
@@ -680,6 +796,24 @@ export default function QuizEditorPage() {
                 <Plus aria-hidden="true" /> Neue Frage erstellen
               </button>
             </div>
+            <div className={styles.poolAssignment}>
+              <span>
+                <Tags aria-hidden="true" />
+                Beim Hinzufügen zuordnen zu
+              </span>
+              <select
+                className={ui.input}
+                onChange={(event) => setPoolTargetTopicId(event.target.value)}
+                value={poolTargetTopicId}
+              >
+                <option value="">Bisheriges Unterthema behalten</option>
+                {categoryTopics.map((topic) => (
+                  <option key={topic.id} value={topic.id}>
+                    {topic.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className={styles.poolList}>
               {poolQuestions.length ? (
@@ -689,9 +823,20 @@ export default function QuizEditorPage() {
                   );
                   return (
                     <article className={styles.poolRow} key={question.id}>
-                      <span className={styles.poolMark}>
-                        <Tags aria-hidden="true" />
-                      </span>
+                      {question.image ? (
+                        <Image
+                          alt={question.image.alt || ""}
+                          className={styles.poolThumb}
+                          height={44}
+                          src={question.image.dataUrl}
+                          unoptimized
+                          width={58}
+                        />
+                      ) : (
+                        <span className={styles.poolMark}>
+                          <Tags aria-hidden="true" />
+                        </span>
+                      )}
                       <span>
                         <strong>{question.title}</strong>
                         <small>
@@ -703,6 +848,14 @@ export default function QuizEditorPage() {
                       <button
                         className={ui.button}
                         onClick={() => {
+                          if (
+                            poolTargetTopicId &&
+                            question.topicId !== poolTargetTopicId
+                          ) {
+                            updateQuestion(question.id, {
+                              topicId: poolTargetTopicId,
+                            });
+                          }
                           addQuestionToQuiz(quiz.id, question.id);
                           setActiveId(question.id);
                           showToast("Frage wurde aus dem Pool hinzugefügt.");

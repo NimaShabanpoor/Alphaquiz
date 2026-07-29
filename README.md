@@ -10,10 +10,15 @@ eigene CSS-Moduldatei.
 - Quizverwaltung mit Status, Kategorien und beliebig vielen Fragen
 - Single Choice, Multiple Choice, Wahr/Falsch, Text, Reihenfolge, Zuordnung
   und Skala
-- zentraler Fragenpool und Kategorienverwaltung
+- zentraler Fragenpool mit Kategorien, Unterkategorien und Fragebildern
 - spielbare Vorschau mit Punkteauswertung
+- veröffentlichbare Prüfungslinks mit Name und E-Mail-Adresse
+- Open-Book- oder geschützter Prüfungsmodus mit Tabwechsel-Meldungen
+- Gesamt- oder Unterthemen-Auswertung mit individuellen Bestehensgrenzen
+- Prüfungsaktivität, einmalige Versuche und Freigabe durch Administratoren
 - Import von Access (`.accdb`/`.mdb`), CSV und AlphaQuiz-JSON
-- echte DOCX- und PDF-Dateien für den Microsoft-Forms-Schnellimport
+- echte DOCX- und PDF-Dateien inklusive Fragebildern für den
+  Microsoft-Forms-Schnellimport
 - CSV-Prüfliste und JSON-Sicherung
 - automatische lokale Speicherung im Browser
 - optionale Supabase-Synchronisierung über das Next.js-Backend
@@ -25,7 +30,9 @@ npm install
 npm run dev
 ```
 
-Danach `http://localhost:3000` öffnen.
+Danach `http://localhost:3000` öffnen. Prüfungslinks werden unter
+`http://localhost:3000/exams` erstellt, laufende Versuche erscheinen unter
+`http://localhost:3000/exam-activity`.
 
 ## Supabase einrichten
 
@@ -39,6 +46,17 @@ Danach `http://localhost:3000` öffnen.
 
 Der Service-Role-Key wird nur in Next.js-Route-Handlern verwendet und niemals
 an den Browser ausgeliefert.
+
+## Ergebnis-E-Mails
+
+Für den optionalen Versand über Resend in `.env` zusätzlich
+`RESEND_API_KEY` und `RESEND_FROM_EMAIL` setzen. Ohne diese Angaben werden
+Prüfungsergebnisse weiterhin lokal und in Supabase gespeichert; die App zeigt
+dann an, dass keine E-Mail versendet wurde.
+
+Microsoft Forms kann eingebettete Abbildungen beim Schnellimport auslassen.
+AlphaQuiz bettet sie in DOCX und PDF ein; nach dem Import müssen die Bilder in
+der Forms-Überprüfung kontrolliert und bei Bedarf manuell ergänzt werden.
 
 ## Prüfung
 

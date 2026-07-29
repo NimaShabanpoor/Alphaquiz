@@ -1,0 +1,202 @@
+.create {
+  align-items: end;
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: minmax(260px, 1fr) minmax(240px, 0.8fr) auto;
+  margin-bottom: var(--sp-5);
+  padding: var(--sp-5);
+}
+
+.create > div > span,
+.publication header small {
+  color: var(--muted);
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.create h2,
+.publication h2 {
+  font-size: 17px;
+  margin-top: var(--sp-1);
+}
+
+.create p,
+.publication header p {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  margin-top: var(--sp-1);
+}
+
+.publications {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.publication {
+  overflow: hidden;
+}
+
+.publication > header {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.examIcon {
+  align-items: center;
+  background: var(--amber-soft);
+  border-radius: 7px;
+  color: var(--amber-deep);
+  display: flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.examIcon svg {
+  height: 18px;
+  width: 18px;
+}
+
+.statusToggle,
+.mailToggle {
+  align-items: center;
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.statusToggle {
+  background: var(--green-soft);
+  border-radius: 999px;
+  color: var(--green);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.statusToggle:has(input:not(:checked)) {
+  background: var(--line-2);
+  color: var(--muted);
+}
+
+.settings {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: 1fr 1fr 1fr 1.2fr;
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.unitInput {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 24px 1fr 34px;
+}
+
+.unitInput > svg {
+  color: var(--muted);
+  height: 14px;
+  width: 14px;
+}
+
+.unitInput > span {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  text-align: right;
+}
+
+.mailToggle {
+  align-self: end;
+  background: var(--amber-tint);
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  min-height: var(--h-ctl);
+  padding: 0 var(--sp-3);
+}
+
+.mailToggle > svg {
+  color: var(--amber-deep);
+  height: 14px;
+  width: 14px;
+}
+
+.mailToggle > span {
+  display: grid;
+  flex: 1;
+}
+
+.mailToggle strong {
+  font-size: var(--fs-meta);
+}
+
+.mailToggle small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.publication > footer {
+  align-items: end;
+  background: var(--amber-tint);
+  border-top: 1px solid var(--line-2);
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: minmax(240px, 1fr) auto auto auto;
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.linkField {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.linkField > span {
+  color: var(--muted);
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.linkField input {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  height: var(--h-ctl);
+  padding: 0 var(--sp-3);
+  width: 100%;
+}
+
+.attempts {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: var(--fs-meta);
+  gap: var(--sp-2);
+  height: var(--h-ctl);
+  white-space: nowrap;
+}
+
+.attempts svg {
+  height: 13px;
+  width: 13px;
+}
+
+@media (max-width: 900px) {
+  .create,
+  .settings,
+  .publication > footer {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .create,
+  .settings,
+  .publication > footer {
+    grid-template-columns: 1fr;
+  }
+}

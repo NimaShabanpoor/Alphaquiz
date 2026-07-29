@@ -14,6 +14,7 @@ create table if not exists public.questions (
   id text primary key,
   title text not null,
   description text not null default '',
+  image jsonb,
   type text not null,
   "categoryId" text references public.categories(id),
   "topicId" text references public.topics(id),
@@ -42,7 +43,8 @@ create table if not exists public.quizzes (
 );
 
 alter table public.questions
-  add column if not exists "topicId" text references public.topics(id);
+  add column if not exists "topicId" text references public.topics(id),
+  add column if not exists image jsonb;
 
 alter table public.quizzes
   add column if not exists "passPercentage" integer not null default 70,
@@ -64,6 +66,46 @@ create table if not exists public.exports (
   "createdAt" timestamptz not null default now()
 );
 
+create table if not exists public.exam_publications (
+  id text primary key,
+  "quizId" text not null references public.quizzes(id) on delete cascade,
+  slug text not null unique,
+  mode text not null default 'closed',
+  "timeLimit" integer not null default 45,
+  "maxViolations" integer not null default 2,
+  active boolean not null default true,
+  "sendResults" boolean not null default true,
+  "createdAt" timestamptz not null default now()
+);
+
+create table if not exists public.exam_attempts (
+  id text primary key,
+  "publicationId" text not null references public.exam_publications(id) on delete cascade,
+  name text not null,
+  email text not null,
+  status text not null default 'in-progress',
+  "startedAt" timestamptz not null default now(),
+  "submittedAt" timestamptz,
+  "currentQuestion" integer not null default 0,
+  responses jsonb not null default '{}'::jsonb,
+  score integer not null default 0,
+  possible integer not null default 0,
+  percentage integer not null default 0,
+  passed boolean not null default false,
+  "topicResults" jsonb not null default '[]'::jsonb,
+  "violationCount" integer not null default 0,
+  "resultEmailStatus" text not null default 'pending'
+);
+
+create table if not exists public.exam_events (
+  id text primary key,
+  "publicationId" text not null references public.exam_publications(id) on delete cascade,
+  "attemptId" text not null references public.exam_attempts(id) on delete cascade,
+  type text not null,
+  message text not null,
+  "createdAt" timestamptz not null default now()
+);
+
 alter table public.categories enable row level security;
 alter table public.topics enable row level security;
 alter table public.questions enable row level security;
@@ -71,6 +113,9 @@ alter table public.answers enable row level security;
 alter table public.quizzes enable row level security;
 alter table public.quiz_questions enable row level security;
 alter table public.exports enable row level security;
+alter table public.exam_publications enable row level security;
+alter table public.exam_attempts enable row level security;
+alter table public.exam_events enable row level security;
 
 grant usage on schema public to service_role;
 grant all privileges on table public.categories to service_role;
@@ -80,3 +125,6 @@ grant all privileges on table public.answers to service_role;
 grant all privileges on table public.quizzes to service_role;
 grant all privileges on table public.quiz_questions to service_role;
 grant all privileges on table public.exports to service_role;
+grant all privileges on table public.exam_publications to service_role;
+grant all privileges on table public.exam_attempts to service_role;
+grant all privileges on table public.exam_events to service_role;

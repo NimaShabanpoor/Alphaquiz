@@ -12,6 +12,11 @@ import {
 import { seedState } from "@/lib/seed-data";
 import type {
   Category,
+  ExamAttempt,
+  ExamAttemptStatus,
+  ExamEvent,
+  ExamEventType,
+  ExamPublication,
   ExportRecord,
   Question,
   Quiz,
@@ -41,6 +46,21 @@ type AppContextValue = {
   createTopic: (categoryId: string, name: string) => string;
   updateTopic: (id: string, patch: Partial<Topic>) => void;
   deleteTopic: (id: string) => void;
+  createExamPublication: (quizId: string) => string;
+  updateExamPublication: (
+    id: string,
+    patch: Partial<ExamPublication>,
+  ) => void;
+  startExamAttempt: (
+    publicationId: string,
+    name: string,
+    email: string,
+  ) => { attemptId?: string; error?: string };
+  updateExamAttempt: (id: string, patch: Partial<ExamAttempt>) => void;
+  addExamEvent: (
+    event: Omit<ExamEvent, "id" | "createdAt">,
+  ) => string;
+  resetExamAttempt: (id: string) => void;
   importQuestions: (questions: Question[], categories: Category[]) => number;
   recordExport: (record: Omit<ExportRecord, "id" | "createdAt">) => void;
   resetDemo: () => void;
@@ -50,6 +70,18 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 function makeId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
+}
+
+function slugify(value: string) {
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "pruefung"
+  );
 }
 
 function normalizeState(stored: Partial<QuizState>): QuizState {
@@ -76,6 +108,14 @@ function normalizeState(stored: Partial<QuizState>): QuizState {
   const questions = (stored.questions ?? seedState.questions).map(
     (question) => ({
       ...question,
+      image:
+        question.image?.dataUrl && question.image?.fileName
+          ? {
+              dataUrl: question.image.dataUrl,
+              fileName: question.image.fileName,
+              alt: question.image.alt ?? "",
+            }
+          : undefined,
       topicId:
         question.topicId &&
         topics.some(
@@ -111,6 +151,9 @@ function normalizeState(stored: Partial<QuizState>): QuizState {
     questions,
     quizzes,
     exports: stored.exports ?? [],
+    examPublications: stored.examPublications ?? [],
+    examAttempts: stored.examAttempts ?? [],
+    examEvents: stored.examEvents ?? [],
   };
 }
 
@@ -119,6 +162,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<number | null>(null);
+  const lastExternalEventRef = useRef("");
 
   useEffect(() => {
     let cancelled = false;
@@ -144,7 +188,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (ready) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (!ready) return;
+    let quotaTimer: number | undefined;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      quotaTimer = window.setTimeout(
+        () =>
+          setToast(
+            "Der lokale Speicher ist voll. Entferne grosse Bilder oder synchronisiere mit Supabase.",
+          ),
+        0,
+      );
+    }
+    return () => {
+      if (quotaTimer) window.clearTimeout(quotaTimer);
+    };
   }, [ready, state]);
 
   const showToast = useCallback((message: string) => {
@@ -152,6 +211,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(""), 3000);
   }, []);
+
+  useEffect(() => {
+    function syncFromAnotherTab(event: StorageEvent) {
+      if (event.key !== STORAGE_KEY || !event.newValue) return;
+      try {
+        const nextState = normalizeState(JSON.parse(event.newValue));
+        setState(nextState);
+        const newest = nextState.examEvents[0];
+        if (
+          newest &&
+          newest.id !== lastExternalEventRef.current &&
+          (newest.type === "tab-hidden" ||
+            newest.type === "fullscreen-exit")
+        ) {
+          lastExternalEventRef.current = newest.id;
+          const attempt = nextState.examAttempts.find(
+            (item) => item.id === newest.attemptId,
+          );
+          showToast(
+            `Prüfungswarnung: ${attempt?.name ?? "Teilnehmende Person"} – ${newest.message}`,
+          );
+        }
+      } catch {
+        // Ein beschädigter Eintrag in einem anderen Tab wird ignoriert.
+      }
+    }
+    window.addEventListener("storage", syncFromAnotherTab);
+    return () => window.removeEventListener("storage", syncFromAnotherTab);
+  }, [showToast]);
 
   const createQuiz = useCallback(() => {
     const id = makeId("quiz");
@@ -192,6 +280,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...current,
       quizzes: current.quizzes.filter((quiz) => quiz.id !== id),
       exports: current.exports.filter((record) => record.quizId !== id),
+      examPublications: current.examPublications.map((publication) =>
+        publication.quizId === id
+          ? { ...publication, active: false }
+          : publication,
+      ),
     }));
   }, []);
 
@@ -205,6 +298,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           id,
           title: "Neue Frage",
           description: "",
+          image: undefined,
           type: "single",
           categoryId: categoryId ?? current.categories[0]?.id ?? "",
           topicId:
@@ -365,6 +459,165 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const createExamPublication = useCallback(
+    (quizId: string) => {
+      const id = makeId("exam");
+      setState((current) => {
+        const quiz = current.quizzes.find((item) => item.id === quizId);
+        const slug = `${slugify(quiz?.title ?? "pruefung")}-${crypto
+          .randomUUID()
+          .slice(0, 6)}`;
+        return {
+          ...current,
+          examPublications: [
+            {
+              id,
+              quizId,
+              slug,
+              mode: "closed",
+              timeLimit: 45,
+              maxViolations: 2,
+              active: true,
+              sendResults: true,
+              createdAt: new Date().toISOString(),
+            },
+            ...current.examPublications,
+          ],
+        };
+      });
+      return id;
+    },
+    [],
+  );
+
+  const updateExamPublication = useCallback(
+    (id: string, patch: Partial<ExamPublication>) => {
+      setState((current) => ({
+        ...current,
+        examPublications: current.examPublications.map((publication) =>
+          publication.id === id ? { ...publication, ...patch } : publication,
+        ),
+      }));
+    },
+    [],
+  );
+
+  const startExamAttempt = useCallback(
+    (publicationId: string, name: string, email: string) => {
+      const publication = state.examPublications.find(
+        (item) => item.id === publicationId,
+      );
+      if (!publication?.active) {
+        return { error: "Diese Prüfung ist derzeit nicht freigeschaltet." };
+      }
+      const normalizedEmail = email.trim().toLowerCase();
+      const existing = state.examAttempts.find(
+        (attempt) =>
+          attempt.publicationId === publicationId &&
+          attempt.email.toLowerCase() === normalizedEmail &&
+          attempt.status !== "reset",
+      );
+      if (existing) {
+        return {
+          error:
+            existing.status === "in-progress"
+              ? "Für diese E-Mail-Adresse läuft bereits ein Versuch."
+              : "Für diese E-Mail-Adresse wurde der einzige Versuch bereits verwendet.",
+        };
+      }
+
+      const attemptId = makeId("attempt");
+      const eventId = makeId("event");
+      const startedAt = new Date().toISOString();
+      const attempt: ExamAttempt = {
+        id: attemptId,
+        publicationId,
+        name: name.trim(),
+        email: normalizedEmail,
+        status: "in-progress",
+        startedAt,
+        currentQuestion: 0,
+        responses: {},
+        score: 0,
+        possible: 0,
+        percentage: 0,
+        passed: false,
+        topicResults: [],
+        violationCount: 0,
+        resultEmailStatus: "pending",
+      };
+      setState((current) => ({
+        ...current,
+        examAttempts: [attempt, ...current.examAttempts],
+        examEvents: [
+          {
+            id: eventId,
+            publicationId,
+            attemptId,
+            type: "started",
+            message: "Prüfung gestartet",
+            createdAt: startedAt,
+          },
+          ...current.examEvents,
+        ],
+      }));
+      return { attemptId };
+    },
+    [state.examAttempts, state.examPublications],
+  );
+
+  const updateExamAttempt = useCallback(
+    (id: string, patch: Partial<ExamAttempt>) => {
+      setState((current) => ({
+        ...current,
+        examAttempts: current.examAttempts.map((attempt) =>
+          attempt.id === id ? { ...attempt, ...patch } : attempt,
+        ),
+      }));
+    },
+    [],
+  );
+
+  const addExamEvent = useCallback(
+    (event: Omit<ExamEvent, "id" | "createdAt">) => {
+      const id = makeId("event");
+      setState((current) => ({
+        ...current,
+        examEvents: [
+          { ...event, id, createdAt: new Date().toISOString() },
+          ...current.examEvents,
+        ],
+      }));
+      return id;
+    },
+    [],
+  );
+
+  const resetExamAttempt = useCallback((id: string) => {
+    setState((current) => {
+      const attempt = current.examAttempts.find((item) => item.id === id);
+      if (!attempt) return current;
+      const status: ExamAttemptStatus = "reset";
+      return {
+        ...current,
+        examAttempts: current.examAttempts.map((item) =>
+          item.id === id ? { ...item, status } : item,
+        ),
+        examEvents: [
+          {
+            id: makeId("event"),
+            publicationId: attempt.publicationId,
+            attemptId: attempt.id,
+            type: "reset" as ExamEventType,
+            message: "Versuch durch Administrator freigegeben",
+            createdAt: new Date().toISOString(),
+          },
+          ...current.examEvents,
+        ],
+      };
+    });
+  }, []);
+
   const importQuestions = useCallback(
     (questions: Question[], categories: Category[]) => {
       setState((current) => {
@@ -479,6 +732,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createTopic,
       updateTopic,
       deleteTopic,
+      createExamPublication,
+      updateExamPublication,
+      startExamAttempt,
+      updateExamAttempt,
+      addExamEvent,
+      resetExamAttempt,
       importQuestions,
       recordExport,
       resetDemo,
@@ -502,6 +761,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createTopic,
       updateTopic,
       deleteTopic,
+      createExamPublication,
+      updateExamPublication,
+      startExamAttempt,
+      updateExamAttempt,
+      addExamEvent,
+      resetExamAttempt,
       importQuestions,
       recordExport,
       resetDemo,

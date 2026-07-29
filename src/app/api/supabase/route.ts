@@ -70,6 +70,7 @@ export async function POST(request: Request) {
           id: question.id,
           title: question.title,
           description: question.description,
+          image: question.image ?? null,
           type: question.type,
           categoryId: question.categoryId,
           topicId: question.topicId,
@@ -119,6 +120,13 @@ export async function POST(request: Request) {
         "quizId,questionId",
       ),
     ]);
+    await upsert(
+      current.client,
+      "exam_publications",
+      state.examPublications,
+    );
+    await upsert(current.client, "exam_attempts", state.examAttempts);
+    await upsert(current.client, "exam_events", state.examEvents);
     return Response.json({ synced: true, syncedAt: new Date().toISOString() });
   } catch (error) {
     return Response.json(

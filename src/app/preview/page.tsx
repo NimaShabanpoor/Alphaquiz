@@ -8,6 +8,7 @@ import {
   RotateCcw,
   XCircle,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
@@ -241,6 +242,20 @@ function PreviewContent() {
                 {question.points === 1 ? "Punkt" : "Punkte"}
               </p>
               <h2>{question.title}</h2>
+              {question.image ? (
+                <figure className={styles.questionImage}>
+                  <Image
+                    alt={question.image.alt || "Bild zur Frage"}
+                    height={520}
+                    src={question.image.dataUrl}
+                    unoptimized
+                    width={900}
+                  />
+                  {question.image.alt ? (
+                    <figcaption>{question.image.alt}</figcaption>
+                  ) : null}
+                </figure>
+              ) : null}
               <p className={styles.description}>
                 {question.description ||
                   (question.type === "multiple"

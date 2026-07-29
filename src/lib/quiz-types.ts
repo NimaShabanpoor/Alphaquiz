@@ -15,10 +15,17 @@ export type Answer = {
   correct: boolean;
 };
 
+export type QuestionImage = {
+  dataUrl: string;
+  fileName: string;
+  alt: string;
+};
+
 export type Question = {
   id: string;
   title: string;
   description: string;
+  image?: QuestionImage;
   type: QuestionType;
   categoryId: string;
   topicId: string;
@@ -54,6 +61,70 @@ export type Topic = {
   name: string;
 };
 
+export type ExamMode = "closed" | "open-book";
+export type ExamAttemptStatus =
+  | "in-progress"
+  | "submitted"
+  | "terminated"
+  | "reset";
+export type ExamEventType =
+  | "started"
+  | "tab-hidden"
+  | "fullscreen-exit"
+  | "submitted"
+  | "terminated"
+  | "reset";
+
+export type ExamPublication = {
+  id: string;
+  quizId: string;
+  slug: string;
+  mode: ExamMode;
+  timeLimit: number;
+  maxViolations: number;
+  active: boolean;
+  sendResults: boolean;
+  createdAt: string;
+};
+
+export type ExamTopicResult = {
+  topicId: string;
+  name: string;
+  score: number;
+  possible: number;
+  percentage: number;
+  required: number;
+  passed: boolean;
+};
+
+export type ExamAttempt = {
+  id: string;
+  publicationId: string;
+  name: string;
+  email: string;
+  status: ExamAttemptStatus;
+  startedAt: string;
+  submittedAt?: string;
+  currentQuestion: number;
+  responses: Record<string, string[]>;
+  score: number;
+  possible: number;
+  percentage: number;
+  passed: boolean;
+  topicResults: ExamTopicResult[];
+  violationCount: number;
+  resultEmailStatus: "pending" | "sent" | "not-configured" | "failed";
+};
+
+export type ExamEvent = {
+  id: string;
+  publicationId: string;
+  attemptId: string;
+  type: ExamEventType;
+  message: string;
+  createdAt: string;
+};
+
 export type ExportRecord = {
   id: string;
   quizId: string;
@@ -68,6 +139,9 @@ export type QuizState = {
   categories: Category[];
   topics: Topic[];
   exports: ExportRecord[];
+  examPublications: ExamPublication[];
+  examAttempts: ExamAttempt[];
+  examEvents: ExamEvent[];
 };
 
 export const scoringModeLabels: Record<ScoringMode, string> = {
