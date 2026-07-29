@@ -91,7 +91,7 @@ export default function QuizzesPage() {
               </button>
             }
             icon={FileQuestion}
-            text="Ein Quiz bündelt Fragen und kann anschließend als Word, PDF, CSV oder JSON exportiert werden."
+            text="Ein Quiz bündelt Fragen und kann anschliessend als Word, PDF, CSV oder JSON exportiert werden."
             title="Noch kein Quiz"
           />
         )}

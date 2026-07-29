@@ -60,7 +60,7 @@ export default function ExamsPage() {
           <span>Neue Veröffentlichung</span>
           <h2>Sicheren Prüfungslink erstellen</h2>
           <p>
-            Teilnehmende melden sich ausschließlich mit Name und E-Mail-Adresse
+            Teilnehmende melden sich ausschliesslich mit Name und E-Mail-Adresse
             an.
           </p>
         </div>
@@ -175,7 +175,7 @@ export default function ExamsPage() {
                     </div>
                   </label>
                   <label className={ui.field}>
-                    <span>Verstöße erlaubt</span>
+                    <span>Verstösse erlaubt</span>
                     <select
                       className={ui.input}
                       disabled={publication.mode === "open-book"}

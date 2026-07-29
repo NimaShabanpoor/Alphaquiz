@@ -32,6 +32,8 @@ import type {
 import { questionTypeLabels } from "@/lib/quiz-types";
 import styles from "./page.module.css";
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 function formatTime(seconds: number) {
   const minutes = Math.floor(Math.max(0, seconds) / 60);
   const rest = Math.max(0, seconds) % 60;
@@ -148,7 +150,7 @@ export default function PublicExamPage() {
         type: status,
         message:
           status === "terminated"
-            ? "Prüfung wegen Regelverstoß beendet"
+            ? "Prüfung wegen Regelverstoss beendet"
             : "Prüfung abgegeben",
       });
       if (document.fullscreenElement) {
@@ -248,15 +250,22 @@ export default function PublicExamPage() {
   async function start() {
     setError("");
     if (!publication || !quiz) return;
-    if (!name.trim() || !email.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!name.trim() || !normalizedEmail) {
       setError("Bitte gib deinen Namen und deine E-Mail-Adresse ein.");
+      return;
+    }
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      setError(
+        "Bitte gib eine gültige E-Mail-Adresse ein, zum Beispiel name@firma.ch.",
+      );
       return;
     }
     if (!accepted) {
       setError("Bitte bestätige zuerst die Prüfungsregeln.");
       return;
     }
-    const result = startExamAttempt(publication.id, name, email);
+    const result = startExamAttempt(publication.id, name, normalizedEmail);
     if (!result.attemptId) {
       setError(result.error ?? "Die Prüfung konnte nicht gestartet werden.");
       return;
@@ -391,6 +400,7 @@ export default function PublicExamPage() {
                 autoComplete="email"
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="max.muster@beispiel.ch"
+                required
                 type="email"
                 value={email}
               />
@@ -462,7 +472,7 @@ export default function PublicExamPage() {
             {attempt.status === "terminated" ? (
               <div className={styles.terminated}>
                 <AlertTriangle aria-hidden="true" />
-                Die Prüfung wurde wegen eines Regelverstoßes automatisch
+                Die Prüfung wurde wegen eines Regelverstosses automatisch
                 beendet.
               </div>
             ) : null}
@@ -636,18 +646,18 @@ export default function PublicExamPage() {
             </span>
             <h2 id="violation-title">Tabwechsel erkannt</h2>
             <p>
-              Du hast den Prüfungs-Tab oder das Vollbild verlassen. Der Verstoß
+              Du hast den Prüfungs-Tab oder das Vollbild verlassen. Der Verstoss
               wurde gespeichert und dem Administrator gemeldet.
             </p>
             <strong>
-              Verstoß {attempt.violationCount} von{" "}
+              Verstoss {attempt.violationCount} von{" "}
               {publication.maxViolations}
             </strong>
             <button onClick={() => void continueAfterWarning()} type="button">
               Prüfung fortsetzen
             </button>
             <small>
-              Der nächste Verstoß kann die Prüfung automatisch beenden.
+              Der nächste Verstoss kann die Prüfung automatisch beenden.
             </small>
           </section>
         </div>

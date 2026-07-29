@@ -111,7 +111,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <header className={styles.mobileBar}>
         <Brand />
         <button
-          aria-label={open ? "Navigation schließen" : "Navigation öffnen"}
+          aria-label={open ? "Navigation schliessen" : "Navigation öffnen"}
           className={styles.menuButton}
           onClick={() => setOpen((current) => !current)}
           type="button"
@@ -170,7 +170,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {open ? (
         <button
-          aria-label="Navigation schließen"
+          aria-label="Navigation schliessen"
           className={styles.shade}
           onClick={() => setOpen(false)}
           type="button"

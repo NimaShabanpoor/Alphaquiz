@@ -186,7 +186,7 @@ export default function QuestionsPage() {
                 <h2 id="question-dialog-title">{selected.title}</h2>
               </div>
               <button
-                aria-label="Dialog schließen"
+                aria-label="Dialog schliessen"
                 className={`${ui.button} ${ui.quiet}`}
                 onClick={() => setSelectedId("")}
                 type="button"

@@ -263,7 +263,7 @@ export async function POST(request: Request) {
     }
     if (file.size > 25 * 1024 * 1024) {
       return Response.json(
-        { error: "Die Datei ist größer als 25 MB." },
+        { error: "Die Datei ist grösser als 25 MB." },
         { status: 413 },
       );
     }

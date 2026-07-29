@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       .join("");
     const interrupted =
       payload.status === "terminated"
-        ? "<p style=\"color:#b4423c\"><strong>Hinweis:</strong> Die Prüfung wurde wegen eines Regelverstoßes beendet.</p>"
+        ? "<p style=\"color:#b4423c\"><strong>Hinweis:</strong> Die Prüfung wurde wegen eines Regelverstosses beendet.</p>"
         : "";
     const html = `
       <div style="font-family:Arial,sans-serif;color:#1c2333;max-width:640px;margin:auto">

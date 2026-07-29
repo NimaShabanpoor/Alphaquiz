@@ -312,7 +312,7 @@ function PreviewContent() {
                   }}
                   type="button"
                 >
-                  {index === questions.length - 1 ? "Abschließen" : "Weiter"}
+                  {index === questions.length - 1 ? "Abschliessen" : "Weiter"}
                   <ArrowRight aria-hidden="true" />
                 </button>
               </div>

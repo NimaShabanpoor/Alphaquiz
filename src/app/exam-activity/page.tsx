@@ -131,7 +131,7 @@ export default function ExamActivityPage() {
                       </small>
                     </span>
                     <span className={ui.pill} data-tone="draft">
-                      {attempt?.violationCount ?? 0}. Verstoß
+                        {attempt?.violationCount ?? 0}. Verstoss
                     </span>
                   </div>
                 );
@@ -141,7 +141,7 @@ export default function ExamActivityPage() {
             <EmptyState
               icon={BellRing}
               text="Sobald jemand den Prüfungstab oder das Vollbild verlässt, erscheint die Meldung hier."
-              title="Noch keine Verstöße"
+              title="Noch keine Verstösse"
             />
           )}
         </article>
@@ -183,7 +183,7 @@ export default function ExamActivityPage() {
                       <strong>{statusLabel}</strong>
                       <small>
                         {attempt.status === "in-progress"
-                          ? `${attempt.violationCount} Verstöße`
+                          ? `${attempt.violationCount} Verstösse`
                           : `${attempt.percentage} % · ${
                               attempt.passed
                                 ? "Bestanden"

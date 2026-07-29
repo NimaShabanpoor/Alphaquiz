@@ -26,6 +26,7 @@ import type {
 
 const STORAGE_KEY = "alphaquiz-state-v2";
 const LEGACY_STORAGE_KEY = "alphaquiz-state-v1";
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type AppContextValue = {
   state: QuizState;
@@ -511,6 +512,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { error: "Diese Prüfung ist derzeit nicht freigeschaltet." };
       }
       const normalizedEmail = email.trim().toLowerCase();
+      if (!EMAIL_PATTERN.test(normalizedEmail)) {
+        return {
+          error:
+            "Bitte gib eine gültige E-Mail-Adresse ein, zum Beispiel name@firma.ch.",
+        };
+      }
       const existing = state.examAttempts.find(
         (attempt) =>
           attempt.publicationId === publicationId &&

@@ -756,7 +756,7 @@ export default function QuizEditorPage() {
                 </h2>
               </div>
               <button
-                aria-label="Fragenpool schließen"
+                aria-label="Fragenpool schliessen"
                 className={`${ui.button} ${ui.quiet}`}
                 onClick={() => setShowPool(false)}
                 type="button"
