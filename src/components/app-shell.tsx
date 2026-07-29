@@ -8,12 +8,13 @@ import {
   Folder,
   LayoutDashboard,
   ListChecks,
+  LogOut,
   Menu,
   Settings,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useQuizApp } from "@/components/app-provider";
 import styles from "./app-shell.module.css";
@@ -51,8 +52,22 @@ function Brand() {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const { toast } = useQuizApp();
+
+  async function logout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      router.replace("/login");
+      router.refresh();
+      setLoggingOut(false);
+    }
+  }
 
   if (pathname === "/login") {
     return <>{children}</>;
@@ -100,10 +115,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className={styles.profile}>
           <span className={styles.avatar}>L</span>
-          <span>
+          <span className={styles.profileCopy}>
             <strong>Luca</strong>
             <small>Administrator</small>
           </span>
+          <button
+            aria-label="Abmelden"
+            className={styles.logoutButton}
+            disabled={loggingOut}
+            onClick={() => void logout()}
+            title="Abmelden"
+            type="button"
+          >
+            <LogOut aria-hidden="true" />
+          </button>
         </div>
       </aside>
 
