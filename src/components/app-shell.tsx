@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BarChart3,
   BellRing,
   CircleHelp,
   ClipboardCheck,
@@ -34,6 +35,12 @@ const navigation = [
     href: "/exam-activity",
     label: "Prüfungsaktivität",
     icon: BellRing,
+    groupStart: false,
+  },
+  {
+    href: "/exam-results",
+    label: "Resultate",
+    icon: BarChart3,
     groupStart: false,
   },
   {

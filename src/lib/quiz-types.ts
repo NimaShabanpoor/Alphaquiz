@@ -84,6 +84,8 @@ export type ExamPublication = {
   maxViolations: number;
   active: boolean;
   sendResults: boolean;
+  availableFrom?: string;
+  availableUntil?: string;
   createdAt: string;
 };
 

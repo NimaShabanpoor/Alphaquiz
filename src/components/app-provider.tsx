@@ -153,7 +153,11 @@ function normalizeState(stored: Partial<QuizState>): QuizState {
     questions,
     quizzes,
     exports: stored.exports ?? [],
-    examPublications: stored.examPublications ?? [],
+    examPublications: (stored.examPublications ?? []).map((publication) => ({
+      ...publication,
+      availableFrom: publication.availableFrom ?? "",
+      availableUntil: publication.availableUntil ?? "",
+    })),
     examAttempts: stored.examAttempts ?? [],
     examEvents: stored.examEvents ?? [],
   };
@@ -481,6 +485,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               maxViolations: 2,
               active: true,
               sendResults: true,
+              availableFrom: "",
+              availableUntil: "",
               createdAt: new Date().toISOString(),
             },
             ...current.examPublications,
@@ -534,6 +540,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       );
       if (!publication?.active) {
         return { error: "Diese Prüfung ist derzeit nicht freigeschaltet." };
+      }
+      const now = Date.now();
+      if (
+        publication.availableFrom &&
+        now < new Date(publication.availableFrom).getTime()
+      ) {
+        return { error: "Diese Prüfung ist noch nicht freigeschaltet." };
+      }
+      if (
+        publication.availableUntil &&
+        now > new Date(publication.availableUntil).getTime()
+      ) {
+        return { error: "Die Freigabe dieser Prüfung ist abgelaufen." };
       }
       const normalizedEmail = email.trim().toLowerCase();
       if (!EMAIL_PATTERN.test(normalizedEmail)) {

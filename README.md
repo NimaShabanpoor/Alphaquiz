@@ -16,6 +16,8 @@ eigene CSS-Moduldatei.
 - Open-Book- oder geschützter Prüfungsmodus mit Tabwechsel-Meldungen
 - Gesamt- oder Unterthemen-Auswertung mit individuellen Bestehensgrenzen
 - Prüfungsaktivität, einmalige Versuche und Freigabe durch Administratoren
+- eigene Resultatseite mit Prüfungszeitraum, Kennzahlen und Fehlerdetails
+- manueller Einzel- und Sammelversand von Ergebnis-E-Mails über Resend
 - Import von Access (`.accdb`/`.mdb`), CSV und AlphaQuiz-JSON
 - echte DOCX- und PDF-Dateien inklusive Fragebildern für den
   Microsoft-Forms-Schnellimport

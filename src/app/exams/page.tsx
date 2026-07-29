@@ -2,6 +2,7 @@
 
 import {
   BookOpen,
+  CalendarClock,
   Clock3,
   Copy,
   ExternalLink,
@@ -17,6 +18,17 @@ import { useQuizApp } from "@/components/app-provider";
 import { EmptyState, PageHeader, ui } from "@/components/ui";
 import type { ExamMode } from "@/lib/quiz-types";
 import styles from "./page.module.css";
+
+function toDateTimeInput(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function toIsoDate(value: string) {
+  return value ? new Date(value).toISOString() : "";
+}
 
 export default function ExamsPage() {
   const {
@@ -202,6 +214,39 @@ export default function ExamsPage() {
                       <option value="1">0 · sofort beenden</option>
                       <option value="2">1 · danach beenden</option>
                     </select>
+                  </label>
+                  <label className={ui.field}>
+                    <span>Freigabe ab</span>
+                    <div className={styles.dateInput}>
+                      <CalendarClock aria-hidden="true" />
+                      <input
+                        className={ui.input}
+                        onChange={(event) =>
+                          updateExamPublication(publication.id, {
+                            availableFrom: toIsoDate(event.target.value),
+                          })
+                        }
+                        type="datetime-local"
+                        value={toDateTimeInput(publication.availableFrom)}
+                      />
+                    </div>
+                  </label>
+                  <label className={ui.field}>
+                    <span>Freigabe bis</span>
+                    <div className={styles.dateInput}>
+                      <CalendarClock aria-hidden="true" />
+                      <input
+                        className={ui.input}
+                        min={toDateTimeInput(publication.availableFrom)}
+                        onChange={(event) =>
+                          updateExamPublication(publication.id, {
+                            availableUntil: toIsoDate(event.target.value),
+                          })
+                        }
+                        type="datetime-local"
+                        value={toDateTimeInput(publication.availableUntil)}
+                      />
+                    </div>
                   </label>
                   <label className={styles.mailToggle}>
                     <Mail aria-hidden="true" />

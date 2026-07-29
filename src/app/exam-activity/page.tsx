@@ -50,9 +50,14 @@ export default function ExamActivityPage() {
     <>
       <PageHeader
         actions={
-          <Link className={`${ui.button} ${ui.primary}`} href="/exams">
-            Prüfungen verwalten
-          </Link>
+          <>
+            <Link className={ui.button} href="/exam-results">
+              Resultate
+            </Link>
+            <Link className={`${ui.button} ${ui.primary}`} href="/exams">
+              Prüfungen verwalten
+            </Link>
+          </>
         }
         eyebrow="Live-Überwachung"
         lead="Tabwechsel und das Verlassen des Vollbilds erscheinen sofort, auch wenn die Prüfung in einem zweiten Browser-Tab läuft."

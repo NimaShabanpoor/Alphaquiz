@@ -13,6 +13,7 @@ type ResultPayload = {
   percentage: number;
   passed: boolean;
   topicResults: ExamTopicResult[];
+  deliveryId?: string;
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -102,7 +103,10 @@ export async function POST(request: Request) {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "Idempotency-Key": `alphaquiz-result/${payload.attemptId}`,
+        "Idempotency-Key": `alphaquiz-result/${payload.attemptId}/${
+          payload.deliveryId?.replace(/[^a-z0-9-]/gi, "").slice(0, 64) ||
+          "automatic"
+        }`,
       },
       body: JSON.stringify(body),
     });

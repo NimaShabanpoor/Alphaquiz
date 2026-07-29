@@ -123,7 +123,11 @@ export async function POST(request: Request) {
     await upsert(
       current.client,
       "exam_publications",
-      state.examPublications,
+      state.examPublications.map((publication) => ({
+        ...publication,
+        availableFrom: publication.availableFrom || null,
+        availableUntil: publication.availableUntil || null,
+      })),
     );
     await upsert(current.client, "exam_attempts", state.examAttempts);
     await upsert(current.client, "exam_events", state.examEvents);

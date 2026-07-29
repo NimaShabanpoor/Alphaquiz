@@ -75,8 +75,14 @@ create table if not exists public.exam_publications (
   "maxViolations" integer not null default 2,
   active boolean not null default true,
   "sendResults" boolean not null default true,
+  "availableFrom" timestamptz,
+  "availableUntil" timestamptz,
   "createdAt" timestamptz not null default now()
 );
+
+alter table public.exam_publications
+  add column if not exists "availableFrom" timestamptz,
+  add column if not exists "availableUntil" timestamptz;
 
 create table if not exists public.exam_attempts (
   id text primary key,

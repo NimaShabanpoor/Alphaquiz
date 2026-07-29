@@ -157,6 +157,8 @@ export const seedState: QuizState = {
       maxViolations: 2,
       active: true,
       sendResults: true,
+      availableFrom: "",
+      availableUntil: "",
       createdAt: "2026-07-29T09:00:00.000Z",
     },
   ],

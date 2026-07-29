@@ -75,10 +75,16 @@ export default function PublicExamPage() {
   const [error, setError] = useState("");
   const [warning, setWarning] = useState(false);
   const [remaining, setRemaining] = useState(0);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const finishingRef = useRef(false);
   const lastViolationRef = useRef(0);
   const attempt = state.examAttempts.find((item) => item.id === attemptId);
   const question = questions[attempt?.currentQuestion ?? 0];
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const sendResultEmail = useCallback(
     async (
@@ -326,12 +332,26 @@ export default function PublicExamPage() {
     );
   }
 
-  if (!publication.active && !attempt) {
+  const opensLater =
+    publication.availableFrom &&
+    currentTime < new Date(publication.availableFrom).getTime();
+  const availabilityEnded =
+    publication.availableUntil &&
+    currentTime > new Date(publication.availableUntil).getTime();
+
+  if ((!publication.active || opensLater || availabilityEnded) && !attempt) {
+    const message = opensLater
+      ? `Diese Prüfung öffnet am ${new Date(
+          publication.availableFrom!,
+        ).toLocaleString("de-CH")}.`
+      : availabilityEnded
+        ? "Der Zeitraum für diese Prüfung ist abgelaufen."
+        : "Der Administrator hat diese Prüfung noch nicht freigeschaltet.";
     return (
       <main className={styles.centerState}>
         <LockKeyhole aria-hidden="true" />
-        <h1>Prüfung geschlossen</h1>
-        <p>Der Administrator hat diese Prüfung noch nicht freigeschaltet.</p>
+        <h1>{opensLater ? "Prüfung noch nicht geöffnet" : "Prüfung geschlossen"}</h1>
+        <p>{message}</p>
       </main>
     );
   }
@@ -416,6 +436,11 @@ export default function PublicExamPage() {
                 <small>
                   {publication.timeLimit} Minuten · {questions.length} Fragen ·{" "}
                   {quiz.passPercentage} % zum Bestehen
+                  {publication.availableUntil
+                    ? ` · offen bis ${new Date(
+                        publication.availableUntil,
+                      ).toLocaleString("de-CH")}`
+                    : ""}
                 </small>
               </span>
               <span className={ui.pill}>1 Versuch</span>
