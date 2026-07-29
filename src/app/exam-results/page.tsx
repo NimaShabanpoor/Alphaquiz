@@ -3,6 +3,7 @@
 import {
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   Eye,
   Mail,
@@ -42,6 +43,7 @@ export default function ExamResultsPage() {
   const { state, updateExamAttempt, showToast } = useQuizApp();
   const [sendingAttemptId, setSendingAttemptId] = useState("");
   const [sendingPublicationId, setSendingPublicationId] = useState("");
+  const [expandedPublicationId, setExpandedPublicationId] = useState("");
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   useEffect(() => {
@@ -175,13 +177,15 @@ export default function ExamResultsPage() {
                 )
               : 0;
             const status = publicationStatus(publication, currentTime);
+            const expanded = expandedPublicationId === publication.id;
+            const detailsId = `exam-results-${publication.id}`;
 
             return (
               <article
                 className={`${ui.card} ${styles.examCard}`}
                 key={publication.id}
               >
-                <header className={styles.examHead}>
+                <header className={styles.examHead} data-expanded={expanded}>
                   <div>
                     <small>Online-Prüfung</small>
                     <h2>{quiz?.title ?? "Gelöschtes Quiz"}</h2>
@@ -190,133 +194,160 @@ export default function ExamResultsPage() {
                       {new Date(publication.createdAt).toLocaleString("de-CH")}
                     </p>
                   </div>
+                  <p className={styles.compactSummary}>
+                    {attempts.length} Versuche · {completed.length} Resultate · Ø{" "}
+                    {average} %
+                  </p>
                   <span className={ui.pill} data-tone={status === "Aktiv" ? "ready" : "draft"}>
                     {status}
                   </span>
-                </header>
-
-                <div className={styles.schedule}>
-                  <span>
-                    <CalendarClock aria-hidden="true" />
-                    <small>Freigabe ab</small>
-                    <strong>{formatDate(publication.availableFrom)}</strong>
-                  </span>
-                  <span>
-                    <CalendarClock aria-hidden="true" />
-                    <small>Freigabe bis</small>
-                    <strong>{formatDate(publication.availableUntil)}</strong>
-                  </span>
-                  <span>
-                    <Clock3 aria-hidden="true" />
-                    <small>Zeit pro Versuch</small>
-                    <strong>{publication.timeLimit} Minuten</strong>
-                  </span>
-                </div>
-
-                <div className={styles.stats}>
-                  <span>
-                    <Users aria-hidden="true" />
-                    <strong>{attempts.length}</strong>
-                    <small>Versuche</small>
-                  </span>
-                  <span>
-                    <CheckCircle2 aria-hidden="true" />
-                    <strong>{passed}</strong>
-                    <small>Bestanden</small>
-                  </span>
-                  <span>
-                    <XCircle aria-hidden="true" />
-                    <strong>{failed}</strong>
-                    <small>Nicht bestanden</small>
-                  </span>
-                  <span>
-                    <strong>{average} %</strong>
-                    <small>Durchschnitt</small>
-                  </span>
-                </div>
-
-                <div className={styles.resultsHead}>
-                  <div>
-                    <small>Teilnehmende</small>
-                    <h3>Abgeschlossene Resultate</h3>
-                  </div>
                   <button
-                    className={`${ui.button} ${ui.primary}`}
-                    disabled={
-                      !completed.length ||
-                      sendingPublicationId === publication.id
+                    aria-controls={detailsId}
+                    aria-expanded={expanded}
+                    aria-label={
+                      expanded
+                        ? "Prüfung einklappen"
+                        : "Prüfung ausklappen"
                     }
+                    className={styles.toggleButton}
                     onClick={() =>
-                      void sendAll(publication.id, completed)
+                      setExpandedPublicationId((current) =>
+                        current === publication.id ? "" : publication.id,
+                      )
                     }
                     type="button"
                   >
-                    <Send aria-hidden="true" />
-                    {sendingPublicationId === publication.id
-                      ? "E-Mails werden gesendet …"
-                      : `Alle E-Mails senden (${completed.length})`}
+                    <ChevronDown aria-hidden="true" />
                   </button>
-                </div>
+                </header>
 
-                {completed.length ? (
-                  <div className={styles.resultRows}>
-                    {completed.map((attempt) => (
-                      <article key={attempt.id}>
-                        <span>
-                          <strong>{attempt.name}</strong>
-                          <small>{attempt.email}</small>
-                        </span>
-                        <span>
-                          <strong>{attempt.percentage} %</strong>
-                          <small>
-                            {attempt.score}/{attempt.possible} Punkte ·{" "}
-                            {attempt.passed
-                              ? "Bestanden"
-                              : "Nicht bestanden"}
-                          </small>
-                        </span>
-                        <span className={styles.mailStatus}>
-                          <Mail aria-hidden="true" />
-                          {attempt.resultEmailStatus === "sent"
-                            ? "Gesendet"
-                            : attempt.resultEmailStatus === "failed"
-                              ? "Fehlgeschlagen"
-                              : attempt.resultEmailStatus === "not-configured"
-                                ? "Nicht konfiguriert"
-                                : "Ausstehend"}
-                        </span>
-                        <div className={styles.rowActions}>
-                          <Link
-                            className={ui.button}
-                            href={`/exam-activity/${attempt.id}`}
-                          >
-                            <Eye aria-hidden="true" /> Öffnen
-                          </Link>
-                          <button
-                            className={`${ui.button} ${ui.primary}`}
-                            disabled={
-                              sendingAttemptId === attempt.id ||
-                              Boolean(sendingPublicationId)
-                            }
-                            onClick={() => void sendResult(attempt)}
-                            type="button"
-                          >
-                            <Send aria-hidden="true" />
-                            {sendingAttemptId === attempt.id
-                              ? "Senden …"
-                              : "E-Mail senden"}
-                          </button>
-                        </div>
-                      </article>
-                    ))}
+                {expanded ? (
+                  <div className={styles.examDetails} id={detailsId}>
+                    <div className={styles.schedule}>
+                      <span>
+                        <CalendarClock aria-hidden="true" />
+                        <small>Freigabe ab</small>
+                        <strong>{formatDate(publication.availableFrom)}</strong>
+                      </span>
+                      <span>
+                        <CalendarClock aria-hidden="true" />
+                        <small>Freigabe bis</small>
+                        <strong>{formatDate(publication.availableUntil)}</strong>
+                      </span>
+                      <span>
+                        <Clock3 aria-hidden="true" />
+                        <small>Zeit pro Versuch</small>
+                        <strong>{publication.timeLimit} Minuten</strong>
+                      </span>
+                    </div>
+
+                    <div className={styles.stats}>
+                      <span>
+                        <Users aria-hidden="true" />
+                        <strong>{attempts.length}</strong>
+                        <small>Versuche</small>
+                      </span>
+                      <span>
+                        <CheckCircle2 aria-hidden="true" />
+                        <strong>{passed}</strong>
+                        <small>Bestanden</small>
+                      </span>
+                      <span>
+                        <XCircle aria-hidden="true" />
+                        <strong>{failed}</strong>
+                        <small>Nicht bestanden</small>
+                      </span>
+                      <span>
+                        <strong>{average} %</strong>
+                        <small>Durchschnitt</small>
+                      </span>
+                    </div>
+
+                    <div className={styles.resultsHead}>
+                      <div>
+                        <small>Teilnehmende</small>
+                        <h3>Abgeschlossene Resultate</h3>
+                      </div>
+                      <button
+                        className={`${ui.button} ${ui.primary}`}
+                        disabled={
+                          !completed.length ||
+                          sendingPublicationId === publication.id
+                        }
+                        onClick={() =>
+                          void sendAll(publication.id, completed)
+                        }
+                        type="button"
+                      >
+                        <Send aria-hidden="true" />
+                        {sendingPublicationId === publication.id
+                          ? "E-Mails werden gesendet …"
+                          : `Alle E-Mails senden (${completed.length})`}
+                      </button>
+                    </div>
+
+                    {completed.length ? (
+                      <div className={styles.resultRows}>
+                        {completed.map((attempt) => (
+                          <article key={attempt.id}>
+                            <span>
+                              <strong>{attempt.name}</strong>
+                              <small>{attempt.email}</small>
+                            </span>
+                            <span>
+                              <strong>{attempt.percentage} %</strong>
+                              <small>
+                                {attempt.score}/{attempt.possible} Punkte ·{" "}
+                                {attempt.passed
+                                  ? "Bestanden"
+                                  : "Nicht bestanden"}
+                              </small>
+                            </span>
+                            <span className={styles.mailStatus}>
+                              <Mail aria-hidden="true" />
+                              {attempt.resultEmailStatus === "sent"
+                                ? "Gesendet"
+                                : attempt.resultEmailStatus === "failed"
+                                  ? "Fehlgeschlagen"
+                                  : attempt.resultEmailStatus ===
+                                      "not-configured"
+                                    ? "Nicht konfiguriert"
+                                    : "Ausstehend"}
+                            </span>
+                            <div className={styles.rowActions}>
+                              <Link
+                                className={ui.button}
+                                href={`/exam-activity/${attempt.id}`}
+                              >
+                                <Eye aria-hidden="true" /> Öffnen
+                              </Link>
+                              <button
+                                className={`${ui.button} ${ui.primary}`}
+                                disabled={
+                                  sendingAttemptId === attempt.id ||
+                                  Boolean(sendingPublicationId)
+                                }
+                                onClick={() => void sendResult(attempt)}
+                                type="button"
+                              >
+                                <Send aria-hidden="true" />
+                                {sendingAttemptId === attempt.id
+                                  ? "Senden …"
+                                  : "E-Mail senden"}
+                              </button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyState
+                        icon={Users}
+                        text="Sobald eine Prüfung abgegeben oder beendet wurde, erscheint das Resultat hier."
+                        title="Noch keine abgeschlossenen Resultate"
+                      />
+                    )}
                   </div>
-                ) : (
-                  <EmptyState
-                    icon={Users}
-                    text="Sobald eine Prüfung abgegeben oder beendet wurde, erscheint das Resultat hier."
-                    title="Noch keine abgeschlossenen Resultate"
-                  />
-                )}
+                ) : null}
               </article>
             );
           })

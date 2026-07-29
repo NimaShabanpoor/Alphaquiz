@@ -9,11 +9,14 @@
 
 .examHead {
   align-items: center;
-  border-bottom: 1px solid var(--line);
-  display: flex;
+  display: grid;
   gap: var(--sp-4);
-  justify-content: space-between;
+  grid-template-columns: minmax(180px, 1fr) auto auto auto;
   padding: var(--sp-4) var(--sp-5);
+}
+
+.examHead[data-expanded="true"] {
+  border-bottom: 1px solid var(--line);
 }
 
 .examHead small,
@@ -34,6 +37,61 @@
   color: var(--muted);
   font-size: 10px;
   margin-top: 2px;
+}
+
+.compactSummary {
+  white-space: nowrap;
+}
+
+.toggleButton {
+  align-items: center;
+  background: var(--amber-soft);
+  border: 0;
+  border-radius: 50%;
+  color: var(--amber-deep);
+  cursor: pointer;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  transition:
+    background 160ms ease,
+    transform 160ms ease;
+  width: 32px;
+}
+
+.toggleButton:hover {
+  background: var(--amber);
+  color: var(--ink);
+}
+
+.toggleButton:focus-visible {
+  outline: 2px solid var(--amber-deep);
+  outline-offset: 2px;
+}
+
+.toggleButton svg {
+  height: 17px;
+  transition: transform 160ms ease;
+  width: 17px;
+}
+
+.toggleButton[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.examDetails {
+  animation: revealDetails 160ms ease-out;
+}
+
+@keyframes revealDetails {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .schedule {
@@ -179,6 +237,15 @@
 }
 
 @media (max-width: 900px) {
+  .examHead {
+    grid-template-columns: minmax(160px, 1fr) auto auto;
+  }
+
+  .compactSummary {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
   .schedule,
   .stats {
     grid-template-columns: repeat(2, 1fr);
@@ -194,6 +261,15 @@
 }
 
 @media (max-width: 600px) {
+  .examHead {
+    gap: var(--sp-2);
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .compactSummary {
+    white-space: normal;
+  }
+
   .schedule,
   .stats,
   .resultRows > article {
