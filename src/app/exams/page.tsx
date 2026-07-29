@@ -8,6 +8,7 @@ import {
   Mail,
   Plus,
   ShieldCheck,
+  Trash2,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -22,9 +23,11 @@ export default function ExamsPage() {
     state,
     createExamPublication,
     updateExamPublication,
+    deleteExamPublication,
     showToast,
   } = useQuizApp();
   const [quizId, setQuizId] = useState(state.quizzes[0]?.id ?? "");
+  const [deleteId, setDeleteId] = useState("");
 
   function createPublication() {
     if (!quizId) return;
@@ -123,18 +126,28 @@ export default function ExamsPage() {
                         : `Gesamtgrenze ${quiz?.passPercentage ?? 70} %`}
                     </p>
                   </div>
-                  <label className={styles.statusToggle}>
-                    <input
-                      checked={publication.active}
-                      onChange={(event) =>
-                        updateExamPublication(publication.id, {
-                          active: event.target.checked,
-                        })
-                      }
-                      type="checkbox"
-                    />
-                    <span>{publication.active ? "Aktiv" : "Deaktiviert"}</span>
-                  </label>
+                  <div className={styles.headerActions}>
+                    <label className={styles.statusToggle}>
+                      <input
+                        checked={publication.active}
+                        onChange={(event) =>
+                          updateExamPublication(publication.id, {
+                            active: event.target.checked,
+                          })
+                        }
+                        type="checkbox"
+                      />
+                      <span>{publication.active ? "Aktiv" : "Deaktiviert"}</span>
+                    </label>
+                    <button
+                      aria-label={`Prüfung ${quiz?.title ?? ""} löschen`}
+                      className={styles.deleteButton}
+                      onClick={() => setDeleteId(publication.id)}
+                      type="button"
+                    >
+                      <Trash2 aria-hidden="true" />
+                    </button>
+                  </div>
                 </header>
 
                 <div className={styles.settings}>
@@ -231,6 +244,39 @@ export default function ExamsPage() {
                     <Users aria-hidden="true" /> {attempts.length} Versuche
                   </span>
                 </footer>
+                {deleteId === publication.id ? (
+                  <div className={styles.deleteConfirm} role="alert">
+                    <span>
+                      <strong>Prüfung wirklich löschen?</strong>
+                      <small>
+                        Der Link, {attempts.length} Versuche und alle
+                        zugehörigen Resultate und Meldungen werden gelöscht.
+                      </small>
+                    </span>
+                    <button
+                      className={ui.button}
+                      onClick={() => setDeleteId("")}
+                      type="button"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      className={`${ui.button} ${ui.danger}`}
+                      onClick={() => {
+                        deleteExamPublication(publication.id);
+                        void fetch(
+                          `/api/supabase?publicationId=${encodeURIComponent(publication.id)}`,
+                          { method: "DELETE" },
+                        ).catch(() => undefined);
+                        setDeleteId("");
+                        showToast("Prüfung und zugehörige Resultate wurden gelöscht.");
+                      }}
+                      type="button"
+                    >
+                      <Trash2 aria-hidden="true" /> Endgültig löschen
+                    </button>
+                  </div>
+                ) : null}
               </article>
             );
           })

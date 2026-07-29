@@ -52,6 +52,7 @@ type AppContextValue = {
     id: string,
     patch: Partial<ExamPublication>,
   ) => void;
+  deleteExamPublication: (id: string) => void;
   startExamAttempt: (
     publicationId: string,
     name: string,
@@ -503,6 +504,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const deleteExamPublication = useCallback((id: string) => {
+    setState((current) => {
+      const attemptIds = new Set(
+        current.examAttempts
+          .filter((attempt) => attempt.publicationId === id)
+          .map((attempt) => attempt.id),
+      );
+      return {
+        ...current,
+        examPublications: current.examPublications.filter(
+          (publication) => publication.id !== id,
+        ),
+        examAttempts: current.examAttempts.filter(
+          (attempt) => attempt.publicationId !== id,
+        ),
+        examEvents: current.examEvents.filter(
+          (event) =>
+            event.publicationId !== id && !attemptIds.has(event.attemptId),
+        ),
+      };
+    });
+  }, []);
+
   const startExamAttempt = useCallback(
     (publicationId: string, name: string, email: string) => {
       const publication = state.examPublications.find(
@@ -741,6 +765,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteTopic,
       createExamPublication,
       updateExamPublication,
+      deleteExamPublication,
       startExamAttempt,
       updateExamAttempt,
       addExamEvent,
@@ -770,6 +795,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteTopic,
       createExamPublication,
       updateExamPublication,
+      deleteExamPublication,
       startExamAttempt,
       updateExamAttempt,
       addExamEvent,

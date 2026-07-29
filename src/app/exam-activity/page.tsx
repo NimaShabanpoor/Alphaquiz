@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   BellRing,
   CheckCircle2,
+  Eye,
   ExternalLink,
   LockKeyhole,
   PlayCircle,
@@ -191,29 +192,39 @@ export default function ExamActivityPage() {
                             }`}
                       </small>
                     </span>
-                    {attempt.status !== "in-progress" ? (
-                      <button
-                        className={ui.button}
-                        onClick={() => {
-                          resetExamAttempt(attempt.id);
-                          showToast(
-                            `${attempt.name} wurde für einen neuen Versuch freigeschaltet.`,
-                          );
-                        }}
-                        type="button"
-                      >
-                        <RotateCcw aria-hidden="true" /> Freigeben
-                      </button>
-                    ) : publication ? (
-                      <Link
-                        aria-label="Prüfungslink öffnen"
-                        className={`${ui.button} ${ui.quiet}`}
-                        href={`/exam/${publication.slug}`}
-                        target="_blank"
-                      >
-                        <ExternalLink aria-hidden="true" />
-                      </Link>
-                    ) : null}
+                    <div className={styles.attemptActions}>
+                      {attempt.status !== "in-progress" ? (
+                        <>
+                          <Link
+                            className={`${ui.button} ${ui.primary}`}
+                            href={`/exam-activity/${attempt.id}`}
+                          >
+                            <Eye aria-hidden="true" /> Ergebnis
+                          </Link>
+                          <button
+                            className={ui.button}
+                            onClick={() => {
+                              resetExamAttempt(attempt.id);
+                              showToast(
+                                `${attempt.name} wurde für einen neuen Versuch freigeschaltet.`,
+                              );
+                            }}
+                            type="button"
+                          >
+                            <RotateCcw aria-hidden="true" /> Freigeben
+                          </button>
+                        </>
+                      ) : publication ? (
+                        <Link
+                          aria-label="Prüfungslink öffnen"
+                          className={`${ui.button} ${ui.quiet}`}
+                          href={`/exam/${publication.slug}`}
+                          target="_blank"
+                        >
+                          <ExternalLink aria-hidden="true" />
+                        </Link>
+                      ) : null}
+                    </div>
                   </article>
                 );
               })}

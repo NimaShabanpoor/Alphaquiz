@@ -140,3 +140,32 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  const publicationId = new URL(request.url).searchParams.get(
+    "publicationId",
+  );
+  if (!publicationId) {
+    return Response.json(
+      { error: "Die Prüfungs-ID fehlt." },
+      { status: 400 },
+    );
+  }
+
+  const current = getSupabaseAdmin();
+  if (!current.client) {
+    return Response.json(
+      { error: current.error ?? "Supabase ist nicht vollständig konfiguriert." },
+      { status: 503 },
+    );
+  }
+
+  const { error } = await current.client
+    .from("exam_publications")
+    .delete()
+    .eq("id", publicationId);
+  if (error) {
+    return Response.json({ error: error.message }, { status: 502 });
+  }
+  return Response.json({ deleted: true });
+}

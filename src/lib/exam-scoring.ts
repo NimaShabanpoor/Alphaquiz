@@ -5,7 +5,7 @@ import type {
   Topic,
 } from "@/lib/quiz-types";
 
-function scoreQuestion(
+export function calculateQuestionScore(
   question: Question,
   responses: Record<string, string[]>,
 ) {
@@ -33,7 +33,7 @@ export function calculateExamResult(
 ) {
   const scoredQuestions = questions.map((question) => ({
     question,
-    score: scoreQuestion(question, responses),
+    score: calculateQuestionScore(question, responses),
   }));
   const score = scoredQuestions.reduce((total, item) => total + item.score, 0);
   const possible = questions.reduce(

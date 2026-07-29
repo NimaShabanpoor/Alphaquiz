@@ -153,6 +153,17 @@
   padding: var(--sp-3) var(--sp-4);
 }
 
+.attemptActions {
+  display: flex;
+  gap: var(--sp-2);
+  justify-content: flex-end;
+}
+
+.attemptActions svg {
+  height: 13px;
+  width: 13px;
+}
+
 .statusDot {
   background: var(--muted);
   border-radius: 50%;
@@ -185,5 +196,14 @@
 
   .eventRow > span:last-child {
     display: none;
+  }
+
+  .attemptRow {
+    grid-template-columns: 10px 1fr;
+  }
+
+  .attemptActions {
+    grid-column: 2;
+    justify-content: flex-start;
   }
 }
