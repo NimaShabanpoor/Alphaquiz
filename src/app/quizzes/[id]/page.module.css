@@ -161,8 +161,42 @@
   opacity: 0.45;
 }
 
+.hiddenTopics {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--sp-1);
+  padding-top: var(--sp-2);
+}
+
+.hiddenTopics small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.hiddenTopics button {
+  align-items: center;
+  background: transparent;
+  color: var(--amber-deep);
+  display: flex;
+  font-size: 10px;
+  gap: var(--sp-1);
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.hiddenTopics svg {
+  height: 11px;
+  width: 11px;
+}
+
 .topicGroup {
   border-top: 1px solid var(--line-2);
+}
+
+.topicHeaderRow {
+  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
 }
 
 .topicHeader {
@@ -175,6 +209,45 @@
   padding: var(--sp-3) var(--sp-2);
   text-align: left;
   width: 100%;
+}
+
+.topicDelete {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  display: flex;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.topicDelete:hover {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.topicDelete svg {
+  height: 13px;
+  width: 13px;
+}
+
+.unassignedHeader {
+  padding: var(--sp-3) 34px;
+}
+
+.unassignedHeader > span {
+  display: grid;
+}
+
+.unassignedHeader strong {
+  font-size: var(--fs-meta);
+}
+
+.unassignedHeader small {
+  color: var(--muted);
+  font-size: 9px;
 }
 
 .topicHeader:hover {

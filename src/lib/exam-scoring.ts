@@ -4,6 +4,7 @@ import type {
   Quiz,
   Topic,
 } from "@/lib/quiz-types";
+import { QUIZ_UNASSIGNED_TOPIC_ID } from "@/lib/quiz-types";
 
 export function calculateQuestionScore(
   question: Question,
@@ -31,6 +32,11 @@ export function calculateExamResult(
   topics: Topic[],
   responses: Record<string, string[]>,
 ) {
+  const hiddenTopicIds = new Set(quiz.hiddenTopicIds);
+  const getQuizTopicId = (question: Question) =>
+    !question.topicId || hiddenTopicIds.has(question.topicId)
+      ? QUIZ_UNASSIGNED_TOPIC_ID
+      : question.topicId;
   const scoredQuestions = questions.map((question) => ({
     question,
     score: calculateQuestionScore(question, responses),
@@ -43,10 +49,10 @@ export function calculateExamResult(
   const percentage = possible ? Math.round((score / possible) * 100) : 0;
 
   const topicResults: ExamTopicResult[] = Array.from(
-    new Set(questions.map((question) => question.topicId).filter(Boolean)),
+    new Set(questions.map(getQuizTopicId)),
   ).map((topicId) => {
     const topicQuestions = scoredQuestions.filter(
-      (item) => item.question.topicId === topicId,
+      (item) => getQuizTopicId(item.question) === topicId,
     );
     const topicScore = topicQuestions.reduce(
       (total, item) => total + item.score,
@@ -63,7 +69,11 @@ export function calculateExamResult(
       : 0;
     return {
       topicId,
-      name: topics.find((topic) => topic.id === topicId)?.name ?? "Ohne Thema",
+      name:
+        topicId === QUIZ_UNASSIGNED_TOPIC_ID
+          ? "Ohne Unterkategorie"
+          : (topics.find((topic) => topic.id === topicId)?.name ??
+            "Ohne Unterkategorie"),
       score: topicScore,
       possible: topicPossible,
       percentage: topicPercentage,

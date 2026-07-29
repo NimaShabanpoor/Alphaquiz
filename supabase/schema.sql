@@ -39,6 +39,7 @@ create table if not exists public.quizzes (
   "passPercentage" integer not null default 70,
   "scoringMode" text not null default 'combined',
   "topicPassPercentages" jsonb not null default '{}'::jsonb,
+  "hiddenTopicIds" jsonb not null default '[]'::jsonb,
   "updatedAt" timestamptz not null default now()
 );
 
@@ -49,7 +50,8 @@ alter table public.questions
 alter table public.quizzes
   add column if not exists "passPercentage" integer not null default 70,
   add column if not exists "scoringMode" text not null default 'combined',
-  add column if not exists "topicPassPercentages" jsonb not null default '{}'::jsonb;
+  add column if not exists "topicPassPercentages" jsonb not null default '{}'::jsonb,
+  add column if not exists "hiddenTopicIds" jsonb not null default '[]'::jsonb;
 
 create table if not exists public.quiz_questions (
   "quizId" text not null references public.quizzes(id) on delete cascade,

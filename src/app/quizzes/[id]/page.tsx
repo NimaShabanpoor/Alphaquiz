@@ -30,6 +30,7 @@ import type {
   ScoringMode,
 } from "@/lib/quiz-types";
 import { questionTypeLabels, scoringModeLabels } from "@/lib/quiz-types";
+import { QUIZ_UNASSIGNED_TOPIC_ID } from "@/lib/quiz-types";
 import styles from "./page.module.css";
 
 function normalizeAnswers(question: Question, type: QuestionType): Answer[] {
@@ -126,11 +127,28 @@ export default function QuizEditorPage() {
     (question) => question.id === resolvedActiveId,
   );
 
-  const categoryTopics = state.topics.filter(
+  const allCategoryTopics = state.topics.filter(
     (topic) => topic.categoryId === quiz.categoryId,
   );
+  const hiddenTopicIds = new Set(quiz.hiddenTopicIds);
+  const categoryTopics = allCategoryTopics.filter(
+    (topic) => !hiddenTopicIds.has(topic.id),
+  );
+  const hiddenCategoryTopics = allCategoryTopics.filter((topic) =>
+    hiddenTopicIds.has(topic.id),
+  );
+  const unassignedQuizQuestions = quizQuestions.filter(
+    (question) =>
+      !question.topicId || hiddenTopicIds.has(question.topicId),
+  );
   const quizTopicIds = Array.from(
-    new Set(quizQuestions.map((question) => question.topicId).filter(Boolean)),
+    new Set(
+      quizQuestions.map((question) =>
+        !question.topicId || hiddenTopicIds.has(question.topicId)
+          ? QUIZ_UNASSIGNED_TOPIC_ID
+          : question.topicId,
+      ),
+    ),
   );
   const poolQuestions = state.questions.filter((question) => {
     const needle = poolQuery.trim().toLowerCase();
@@ -173,6 +191,33 @@ export default function QuizEditorPage() {
       current.filter((currentId) => currentId !== topicId),
     );
     showToast(`Unterkategorie „${name}“ wurde erstellt.`);
+  }
+
+  function hideTopicFromQuiz(topicId: string, name: string) {
+    if (!quiz) return;
+    const topicPassPercentages = { ...quiz.topicPassPercentages };
+    delete topicPassPercentages[topicId];
+    updateQuiz(quiz.id, {
+      hiddenTopicIds: Array.from(
+        new Set([...quiz.hiddenTopicIds, topicId]),
+      ),
+      topicPassPercentages,
+    });
+    setCollapsedTopics((current) =>
+      current.filter((currentId) => currentId !== topicId),
+    );
+    if (poolTargetTopicId === topicId) setPoolTargetTopicId("");
+    showToast(
+      `„${name}“ wurde nur aus diesem Quiz entfernt und bleibt im Fragenpool.`,
+    );
+  }
+
+  function restoreTopicInQuiz(topicId: string, name: string) {
+    if (!quiz) return;
+    updateQuiz(quiz.id, {
+      hiddenTopicIds: quiz.hiddenTopicIds.filter((id) => id !== topicId),
+    });
+    showToast(`„${name}“ wird in diesem Quiz wieder angezeigt.`);
   }
 
   function patchQuestion(patch: Partial<Question>) {
@@ -351,7 +396,9 @@ export default function QuizEditorPage() {
                   <label key={topicId}>
                     <span>
                       <Tags aria-hidden="true" />
-                      {topic?.name ?? "Ohne Thema"}
+                      {topicId === QUIZ_UNASSIGNED_TOPIC_ID
+                        ? "Ohne Unterkategorie"
+                        : (topic?.name ?? "Ohne Unterkategorie")}
                     </span>
                     <div className={styles.percentInput}>
                       <input
@@ -418,6 +465,21 @@ export default function QuizEditorPage() {
               >
                 Anlegen
               </button>
+              {hiddenCategoryTopics.length ? (
+                <div className={styles.hiddenTopics}>
+                  <small>Aus diesem Quiz entfernt</small>
+                  {hiddenCategoryTopics.map((topic) => (
+                    <button
+                      key={topic.id}
+                      onClick={() => restoreTopicInQuiz(topic.id, topic.name)}
+                      type="button"
+                    >
+                      <Plus aria-hidden="true" />
+                      {topic.name} wieder hinzufügen
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
           {categoryTopics.map((topic) => {
@@ -427,27 +489,38 @@ export default function QuizEditorPage() {
             const collapsed = collapsedTopics.includes(topic.id);
             return (
               <div className={styles.topicGroup} key={topic.id}>
-                <button
-                  aria-expanded={!collapsed}
-                  className={styles.topicHeader}
-                  onClick={() =>
-                    setCollapsedTopics((current) =>
-                      collapsed
-                        ? current.filter((id) => id !== topic.id)
-                        : [...current, topic.id],
-                    )
-                  }
-                  type="button"
-                >
-                  <ChevronRight aria-hidden="true" />
-                  <span>
-                    <strong>{topic.name}</strong>
-                    <small>
-                      {topicQuestions.length}{" "}
-                      {topicQuestions.length === 1 ? "Frage" : "Fragen"}
-                    </small>
-                  </span>
-                </button>
+                <div className={styles.topicHeaderRow}>
+                  <button
+                    aria-expanded={!collapsed}
+                    className={styles.topicHeader}
+                    onClick={() =>
+                      setCollapsedTopics((current) =>
+                        collapsed
+                          ? current.filter((id) => id !== topic.id)
+                          : [...current, topic.id],
+                      )
+                    }
+                    type="button"
+                  >
+                    <ChevronRight aria-hidden="true" />
+                    <span>
+                      <strong>{topic.name}</strong>
+                      <small>
+                        {topicQuestions.length}{" "}
+                        {topicQuestions.length === 1 ? "Frage" : "Fragen"}
+                      </small>
+                    </span>
+                  </button>
+                  <button
+                    aria-label={`${topic.name} aus diesem Quiz entfernen`}
+                    className={styles.topicDelete}
+                    onClick={() => hideTopicFromQuiz(topic.id, topic.name)}
+                    title="Nur aus diesem Quiz entfernen"
+                    type="button"
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </button>
+                </div>
                 {!collapsed ? (
                   <div className={styles.topicQuestions}>
                     {topicQuestions.map((question) => (
@@ -486,6 +559,48 @@ export default function QuizEditorPage() {
               </div>
             );
           })}
+          {unassignedQuizQuestions.length || !categoryTopics.length ? (
+            <div className={styles.topicGroup}>
+              <div className={styles.unassignedHeader}>
+                <span>
+                  <strong>Ohne Unterkategorie</strong>
+                  <small>
+                    {unassignedQuizQuestions.length}{" "}
+                    {unassignedQuizQuestions.length === 1 ? "Frage" : "Fragen"}
+                  </small>
+                </span>
+              </div>
+              <div className={styles.topicQuestions}>
+                {unassignedQuizQuestions.map((question) => (
+                  <button
+                    className={styles.questionItem}
+                    data-active={question.id === activeQuestion?.id}
+                    key={question.id}
+                    onClick={() => setActiveId(question.id)}
+                    type="button"
+                  >
+                    <span>{quizQuestions.indexOf(question) + 1}</span>
+                    <span>
+                      <strong>{question.title || "Unbenannte Frage"}</strong>
+                      <small>
+                        {question.image ? (
+                          <ImageIcon aria-label="Mit Bild" />
+                        ) : null}
+                        {question.points} P.
+                      </small>
+                    </span>
+                  </button>
+                ))}
+                <button
+                  className={styles.topicAdd}
+                  onClick={() => openPoolForTopic("")}
+                  type="button"
+                >
+                  <Plus aria-hidden="true" /> Frage zuordnen
+                </button>
+              </div>
+            </div>
+          ) : null}
           <button
             className={styles.addQuestion}
             onClick={() => {
@@ -782,7 +897,7 @@ export default function QuizEditorPage() {
                 value={poolTopicId}
               >
                 <option value="all">Alle Unterthemen</option>
-                {categoryTopics.map((topic) => (
+                {allCategoryTopics.map((topic) => (
                   <option key={topic.id} value={topic.id}>
                     {topic.name}
                   </option>

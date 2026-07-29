@@ -145,6 +145,9 @@ function normalizeState(stored: Partial<QuizState>): QuizState {
     passPercentage: quiz.passPercentage ?? 70,
     scoringMode: quiz.scoringMode ?? "combined",
     topicPassPercentages: quiz.topicPassPercentages ?? {},
+    hiddenTopicIds: Array.isArray(quiz.hiddenTopicIds)
+      ? quiz.hiddenTopicIds
+      : [],
   }));
 
   return {
@@ -262,6 +265,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           passPercentage: 70,
           scoringMode: "combined",
           topicPassPercentages: {},
+          hiddenTopicIds: [],
           updatedAt: new Date().toISOString(),
         },
         ...current.quizzes,

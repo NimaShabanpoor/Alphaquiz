@@ -131,6 +131,7 @@ export const seedState: QuizState = {
       passPercentage: 70,
       scoringMode: "combined",
       topicPassPercentages: {},
+      hiddenTopicIds: [],
       updatedAt: "2026-07-29T08:20:00.000Z",
     },
     {
@@ -143,6 +144,7 @@ export const seedState: QuizState = {
       passPercentage: 70,
       scoringMode: "combined",
       topicPassPercentages: {},
+      hiddenTopicIds: [],
       updatedAt: "2026-07-28T07:05:00.000Z",
     },
   ],

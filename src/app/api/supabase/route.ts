@@ -90,6 +90,7 @@ export async function POST(request: Request) {
           passPercentage: quiz.passPercentage,
           scoringMode: quiz.scoringMode,
           topicPassPercentages: quiz.topicPassPercentages,
+          hiddenTopicIds: quiz.hiddenTopicIds,
           updatedAt: quiz.updatedAt,
         })),
       ),

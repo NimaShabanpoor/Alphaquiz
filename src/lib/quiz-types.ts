@@ -46,6 +46,7 @@ export type Quiz = {
   passPercentage: number;
   scoringMode: ScoringMode;
   topicPassPercentages: Record<string, number>;
+  hiddenTopicIds: string[];
   updatedAt: string;
 };
 
@@ -150,6 +151,8 @@ export const scoringModeLabels: Record<ScoringMode, string> = {
   combined: "Gesamtpunktzahl",
   "per-topic": "Jedes Thema bestehen",
 };
+
+export const QUIZ_UNASSIGNED_TOPIC_ID = "__quiz-unassigned";
 
 export const questionTypeLabels: Record<QuestionType, string> = {
   single: "Single Choice",
