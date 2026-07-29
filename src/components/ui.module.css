@@ -66,6 +66,8 @@
 }
 
 .button svg {
+  display: block;
+  flex: 0 0 13px;
   height: 13px;
   stroke-width: 1.8;
   width: 13px;
@@ -167,15 +169,19 @@
 }
 
 .emptyIcon {
-  align-items: center;
   background: var(--amber-soft);
   border-radius: 50%;
   color: var(--amber-deep);
-  display: flex;
+  display: grid;
   height: 42px;
-  justify-content: center;
+  line-height: 0;
   margin-bottom: var(--sp-4);
+  place-items: center;
   width: 42px;
+}
+
+.emptyIcon svg {
+  display: block;
 }
 
 .empty h2 {

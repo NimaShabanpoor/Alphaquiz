@@ -32,12 +32,18 @@ const navigation = [
 function Brand() {
   return (
     <div className={styles.brand}>
-      <span className={styles.brandMark}>A</span>
-      <span>
+      <span aria-hidden="true" className={styles.brandMark}>
+        <svg viewBox="0 0 48 48">
+          <path className={styles.brandMarkLight} d="M10 39 23 9" />
+          <path className={styles.brandMarkAmber} d="m23 9 15 30" />
+          <path className={styles.brandMarkAmber} d="M16 28h16" />
+        </svg>
+      </span>
+      <span className={styles.brandCopy}>
         <strong className={styles.brandName}>
-          ALPHAQUIZ<span>.</span>
+          ALPHASOLUTION<span>.</span>
         </strong>
-        <small>QUIZ-MANAGER</small>
+        <small>ALPHAQUIZ</small>
       </span>
     </div>
   );

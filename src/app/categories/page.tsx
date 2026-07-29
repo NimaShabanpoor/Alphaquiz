@@ -6,6 +6,19 @@ import { useQuizApp } from "@/components/app-provider";
 import { EmptyState, PageHeader, ui } from "@/components/ui";
 import styles from "./page.module.css";
 
+function categorySymbol(name: string) {
+  const normalized = name.trim().toLocaleLowerCase("de-CH");
+  if (normalized.includes("excel")) return "X";
+  if (normalized.includes("word")) return "W";
+  if (normalized.includes("outlook")) return "O";
+  if (normalized.includes("teams")) return "T";
+  if (normalized.includes("powerpoint")) return "P";
+  if (normalized.includes("access")) return "A";
+  if (normalized.includes("onenote")) return "N";
+  if (normalized.includes("sharepoint")) return "S";
+  return name.trim().slice(0, 1).toLocaleUpperCase("de-CH") || "•";
+}
+
 export default function CategoriesPage() {
   const {
     state,
@@ -77,15 +90,24 @@ export default function CategoriesPage() {
             const used = questionCount > 0 || quizCount > 0;
             return (
               <article className={styles.row} key={category.id}>
-                <input
-                  aria-label={`Farbe für ${category.name}`}
-                  className={styles.color}
-                  onChange={(event) =>
-                    updateCategory(category.id, { color: event.target.value })
-                  }
-                  type="color"
-                  value={category.color}
-                />
+                <label
+                  className={styles.productIcon}
+                  style={{ backgroundColor: category.color }}
+                  title={`Farbe für ${category.name} ändern`}
+                >
+                  <span aria-hidden="true">
+                    {categorySymbol(category.name)}
+                  </span>
+                  <input
+                    aria-label={`Farbe für ${category.name}`}
+                    className={styles.color}
+                    onChange={(event) =>
+                      updateCategory(category.id, { color: event.target.value })
+                    }
+                    type="color"
+                    value={category.color}
+                  />
+                </label>
                 <input
                   aria-label="Kategoriename"
                   className={styles.name}

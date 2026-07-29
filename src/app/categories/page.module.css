@@ -24,12 +24,35 @@
   border-bottom: 0;
 }
 
+.productIcon {
+  border: 1px solid rgb(28 35 51 / 12%);
+  border-radius: 5px;
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  font-size: 13px;
+  font-weight: 700;
+  height: 30px;
+  line-height: 1;
+  overflow: hidden;
+  place-items: center;
+  position: relative;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 18%);
+  width: 30px;
+}
+
+.productIcon span {
+  color: inherit;
+  font-size: inherit;
+  line-height: 1;
+}
+
 .color {
-  background: transparent;
-  border: 0;
-  height: 26px;
-  padding: 0;
-  width: 26px;
+  cursor: pointer;
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+  width: 100%;
 }
 
 .name {
