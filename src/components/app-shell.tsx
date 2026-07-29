@@ -54,6 +54,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { toast } = useQuizApp();
 
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
+
   return (
     <div className={styles.shell}>
       <header className={styles.mobileBar}>
