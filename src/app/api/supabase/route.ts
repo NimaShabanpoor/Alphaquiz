@@ -1,0 +1,129 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { QuizState } from "@/lib/quiz-types";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+
+export const runtime = "nodejs";
+
+async function upsert(
+  client: SupabaseClient,
+  table: string,
+  rows: Record<string, unknown>[],
+  onConflict = "id",
+) {
+  if (!rows.length) return;
+  const { error } = await client
+    .from(table)
+    .upsert(rows, { onConflict, ignoreDuplicates: false });
+  if (error) throw new Error(`${table}: ${error.message}`);
+}
+
+export async function GET() {
+  const current = getSupabaseAdmin();
+  if (!current.client) {
+    return Response.json({
+      configured: current.configured,
+      reachable: false,
+      error: current.error,
+    });
+  }
+
+  try {
+    const { error } = await current.client
+      .from("categories")
+      .select("id")
+      .limit(1);
+    return Response.json({
+      configured: true,
+      reachable: !error,
+      error:
+        error?.code === "PGRST205" || error?.code === "42P01"
+          ? "Die AlphaQuiz-Tabellen fehlen in Supabase. Führe supabase/schema.sql aus."
+          : error?.message,
+    });
+  } catch (error) {
+    return Response.json({
+      configured: true,
+      reachable: false,
+      error: error instanceof Error ? error.message : "Verbindung fehlgeschlagen",
+    });
+  }
+}
+
+export async function POST(request: Request) {
+  const current = getSupabaseAdmin();
+  if (!current.client) {
+    return Response.json(
+      { error: current.error ?? "Supabase ist nicht vollständig konfiguriert." },
+      { status: 503 },
+    );
+  }
+
+  try {
+    const state = (await request.json()) as QuizState;
+    await Promise.all([
+      upsert(current.client, "categories", state.categories),
+      upsert(
+        current.client,
+        "questions",
+        state.questions.map((question) => ({
+          id: question.id,
+          title: question.title,
+          description: question.description,
+          type: question.type,
+          categoryId: question.categoryId,
+          points: question.points,
+          shuffle: question.shuffle,
+        })),
+      ),
+      upsert(
+        current.client,
+        "quizzes",
+        state.quizzes.map((quiz) => ({
+          id: quiz.id,
+          title: quiz.title,
+          description: quiz.description,
+          categoryId: quiz.categoryId,
+          status: quiz.status,
+          updatedAt: quiz.updatedAt,
+        })),
+      ),
+      upsert(current.client, "exports", state.exports),
+    ]);
+    await Promise.all([
+      upsert(
+        current.client,
+        "answers",
+        state.questions.flatMap((question) =>
+          question.answers.map((answer, position) => ({
+            ...answer,
+            questionId: question.id,
+            position,
+          })),
+        ),
+      ),
+      upsert(
+        current.client,
+        "quiz_questions",
+        state.quizzes.flatMap((quiz) =>
+          quiz.questionIds.map((questionId, position) => ({
+            quizId: quiz.id,
+            questionId,
+            position,
+          })),
+        ),
+        "quizId,questionId",
+      ),
+    ]);
+    return Response.json({ synced: true, syncedAt: new Date().toISOString() });
+  } catch (error) {
+    return Response.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Supabase-Synchronisierung fehlgeschlagen.",
+      },
+      { status: 502 },
+    );
+  }
+}

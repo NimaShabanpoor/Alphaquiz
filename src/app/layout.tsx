@@ -1,13 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Source_Serif_4 } from "next/font/google";
+import { Inter, Source_Serif_4 } from "next/font/google";
+import { AppProvider } from "@/components/app-provider";
+import AppShell from "@/components/app-shell";
 import "./globals.css";
-import "./transfer.css";
-import "./responsive.css";
 
-const manrope = Manrope({
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 const sourceSerif = Source_Serif_4({
@@ -17,15 +18,18 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  title: "AlphaQuiz – Quiz-Manager",
+  title: {
+    default: "AlphaQuiz – Quiz-Manager",
+    template: "%s · AlphaQuiz",
+  },
   description:
-    "Interaktiver AlphaQuiz-Mockup für Quiz-Erstellung, Access-Import und Microsoft-Forms-Export.",
+    "Quizzes erstellen, Access-Daten übernehmen und für Microsoft Forms exportieren.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f6f2ea",
+  themeColor: "#fbfaf8",
 };
 
 export default function RootLayout({
@@ -34,8 +38,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de" className={`${manrope.variable} ${sourceSerif.variable}`}>
-      <body>{children}</body>
+    <html
+      className={`${inter.variable} ${sourceSerif.variable}`}
+      data-scroll-behavior="smooth"
+      lang="de"
+    >
+      <body>
+        <AppProvider>
+          <AppShell>{children}</AppShell>
+        </AppProvider>
+      </body>
     </html>
   );
 }

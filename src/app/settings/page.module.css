@@ -1,0 +1,77 @@
+.grid {
+  display: grid;
+  gap: var(--sp-4);
+  max-width: 900px;
+}
+
+.card {
+  align-items: center;
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.icon {
+  align-items: center;
+  background: var(--amber-soft);
+  border-radius: 7px;
+  color: var(--amber-deep);
+  display: flex;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.icon svg {
+  height: 15px;
+  stroke-width: 1.7;
+  width: 15px;
+}
+
+.card small {
+  color: var(--muted);
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.card h2 {
+  font-family: var(--font-serif);
+  font-size: var(--fs-h2);
+  margin: 2px 0;
+}
+
+.card p {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.55;
+}
+
+.card .error {
+  color: var(--red);
+  font-weight: 600;
+  margin-top: var(--sp-2);
+}
+
+.card > button {
+  grid-column: 2 / 4;
+  justify-self: start;
+}
+
+@media (max-width: 640px) {
+  .card {
+    align-items: start;
+    grid-template-columns: 30px 1fr;
+  }
+
+  .card > span:last-of-type {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .card > button {
+    grid-column: 2;
+  }
+}

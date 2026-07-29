@@ -1,0 +1,118 @@
+"use client";
+
+import {
+  CircleHelp,
+  Eye,
+  FileInput,
+  FileOutput,
+  Folder,
+  LayoutDashboard,
+  ListChecks,
+  Menu,
+  Settings,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { useQuizApp } from "@/components/app-provider";
+import styles from "./app-shell.module.css";
+
+const navigation = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/quizzes", label: "Quizzes", icon: ListChecks },
+  { href: "/questions", label: "Fragenpool", icon: CircleHelp },
+  { href: "/categories", label: "Kategorien", icon: Folder },
+  { href: "/import", label: "Import", icon: FileInput },
+  { href: "/export", label: "Export", icon: FileOutput },
+  { href: "/preview", label: "Vorschau", icon: Eye },
+  { href: "/settings", label: "Einstellungen", icon: Settings },
+] as const;
+
+function Brand() {
+  return (
+    <div className={styles.brand}>
+      <span className={styles.brandMark}>A</span>
+      <span>
+        <strong className={styles.brandName}>
+          ALPHAQUIZ<span>.</span>
+        </strong>
+        <small>QUIZ-MANAGER</small>
+      </span>
+    </div>
+  );
+}
+
+export default function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const { toast } = useQuizApp();
+
+  return (
+    <div className={styles.shell}>
+      <header className={styles.mobileBar}>
+        <Brand />
+        <button
+          aria-label={open ? "Navigation schließen" : "Navigation öffnen"}
+          className={styles.menuButton}
+          onClick={() => setOpen((current) => !current)}
+          type="button"
+        >
+          {open ? <X /> : <Menu />}
+        </button>
+      </header>
+
+      <aside className={styles.sidebar} data-open={open}>
+        <Brand />
+        <nav aria-label="Hauptnavigation" className={styles.nav}>
+          {navigation.map((item, index) => {
+            const Icon = item.icon;
+            const active =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href);
+            return (
+              <div key={item.href}>
+                {index === 4 || index === 7 ? <hr /> : null}
+                <Link
+                  aria-current={active ? "page" : undefined}
+                  className={styles.navLink}
+                  data-active={active}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon aria-hidden="true" />
+                  {item.label}
+                </Link>
+              </div>
+            );
+          })}
+        </nav>
+        <div className={styles.profile}>
+          <span className={styles.avatar}>L</span>
+          <span>
+            <strong>Luca</strong>
+            <small>Administrator</small>
+          </span>
+        </div>
+      </aside>
+
+      {open ? (
+        <button
+          aria-label="Navigation schließen"
+          className={styles.shade}
+          onClick={() => setOpen(false)}
+          type="button"
+        />
+      ) : null}
+
+      <main className={styles.main}>{children}</main>
+
+      {toast ? (
+        <div className={styles.toast} role="status">
+          {toast}
+        </div>
+      ) : null}
+    </div>
+  );
+}

@@ -1,0 +1,130 @@
+.stats {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  margin-bottom: var(--sp-5);
+}
+
+.stat {
+  align-items: center;
+  display: flex;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+}
+
+.statIcon {
+  align-items: center;
+  background: var(--amber-soft);
+  border-radius: 7px;
+  color: var(--amber-deep);
+  display: flex;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.statIcon svg {
+  height: 15px;
+  stroke-width: 1.7;
+  width: 15px;
+}
+
+.stat strong,
+.stat span {
+  display: block;
+}
+
+.stat strong {
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--fs-stat);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.stat div > span {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+
+.grid {
+  display: grid;
+  align-items: start;
+  gap: var(--sp-4);
+  grid-template-columns: 1.35fr 1fr;
+}
+
+.panel {
+  overflow: hidden;
+}
+
+.panelHead {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: var(--sp-4) var(--sp-5) var(--sp-3);
+}
+
+.panelHead p {
+  color: var(--muted);
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.panelHead h2 {
+  font-family: var(--font-serif);
+  font-size: var(--fs-h2);
+  margin-top: 2px;
+}
+
+.row {
+  align-items: center;
+  border-top: 1px solid var(--line-2);
+  display: flex;
+  gap: var(--sp-4);
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-5);
+}
+
+.row:hover {
+  background: var(--amber-tint);
+}
+
+.row > span:not(.fileType) {
+  display: grid;
+  gap: 3px;
+}
+
+.row small,
+.muted {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+
+.fileType {
+  align-items: center;
+  background: var(--amber-tint);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--amber-deep);
+  display: flex;
+  font-size: 7.5px;
+  font-weight: 700;
+  height: 26px;
+  justify-content: center;
+  margin-right: auto;
+  width: 30px;
+}
+
+.muted {
+  line-height: 1.6;
+  padding: var(--sp-5);
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,84 @@
+.quizSelect {
+  margin-bottom: var(--sp-4);
+  max-width: 520px;
+}
+
+.layout {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.options {
+  overflow: hidden;
+}
+
+.option {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-2);
+  color: var(--ink);
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: 32px 1fr;
+  padding: var(--sp-4) var(--sp-5);
+  text-align: left;
+  width: 100%;
+}
+
+.option:last-child {
+  border-bottom: 0;
+}
+
+.option[data-active="true"] {
+  background: var(--amber-soft);
+}
+
+.option > span:first-child {
+  align-items: center;
+  background: var(--amber-tint);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--amber-deep);
+  display: flex;
+  font-size: 8px;
+  font-weight: 700;
+  height: 32px;
+  justify-content: center;
+}
+
+.option[data-active="true"] > span:first-child {
+  background: var(--white);
+  border-color: var(--amber);
+}
+
+.option > span:last-child {
+  display: grid;
+  gap: 2px;
+}
+
+.option strong {
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.option small {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+}
+
+.notice {
+  background: var(--amber-tint);
+  border-left: 2px solid var(--amber);
+  border-radius: 0 var(--r-ctl) var(--r-ctl) 0;
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+  padding: var(--sp-4);
+}
+
+.notice strong {
+  color: var(--ink);
+  font-weight: 600;
+}
