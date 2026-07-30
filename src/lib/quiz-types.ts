@@ -63,6 +63,23 @@ export type Topic = {
 };
 
 export type ExamMode = "closed" | "open-book";
+export type ExamQuestionOrderMode =
+  | "fixed"
+  | "shuffle-all"
+  | "shuffle-within-topics"
+  | "shuffle-topics-and-questions";
+export type ExamRetryRandomizationMode = "reuse" | "regenerate";
+
+export type ExamRandomizationConfig = {
+  questionOrderMode: ExamQuestionOrderMode;
+  useTopics: boolean;
+  questionCountByTopic: Record<string, number>;
+  shuffleAnswers: boolean;
+  requiredQuestionIds: string[];
+  lockedQuestionIds: string[];
+  retryMode: ExamRetryRandomizationMode;
+};
+
 export type ExamAttemptStatus =
   | "in-progress"
   | "submitted"
@@ -85,9 +102,29 @@ export type ExamPublication = {
   maxViolations: number;
   active: boolean;
   sendResults: boolean;
+  randomization: ExamRandomizationConfig;
   availableFrom?: string;
   availableUntil?: string;
   createdAt: string;
+};
+
+export type ExamInstance = {
+  id: string;
+  publicationId: string;
+  quizId: string;
+  attemptId: string;
+  studentKey: string;
+  quizSnapshot: Quiz;
+  questions: Question[];
+  questionOrder: string[];
+  topicOrder: string[];
+  topicLabelById: Record<string, string>;
+  answerOrderByQuestionId: Record<string, string[]>;
+  seed: string;
+  generatedAt: string;
+  previousAttemptId?: string;
+  sourceQuizUpdatedAt: string;
+  configSnapshot: ExamRandomizationConfig;
 };
 
 export type ExamTopicResult = {
@@ -117,6 +154,7 @@ export type ExamAttempt = {
   topicResults: ExamTopicResult[];
   violationCount: number;
   resultEmailStatus: "pending" | "sent" | "not-configured" | "failed";
+  instance?: ExamInstance;
 };
 
 export type ExamEvent = {
@@ -153,6 +191,7 @@ export const scoringModeLabels: Record<ScoringMode, string> = {
 };
 
 export const QUIZ_UNASSIGNED_TOPIC_ID = "__quiz-unassigned";
+export const QUIZ_ALL_QUESTIONS_TOPIC_ID = "__quiz-all";
 
 export const questionTypeLabels: Record<QuestionType, string> = {
   single: "Single Choice",

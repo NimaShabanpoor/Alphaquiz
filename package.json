@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test tests/**/*.test.ts",
     "db:setup": "node scripts/setup-supabase.mjs"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "pg": "^8.22.0",
+    "tsx": "^4.23.1",
     "typescript": "^5"
   },
   "overrides": {

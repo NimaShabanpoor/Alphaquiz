@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  defaultExamRandomizationConfig,
+  validateExamRandomization,
+} from "@/lib/exam-randomization";
+import {
   createContext,
   useCallback,
   useContext,
@@ -17,6 +21,7 @@ import type {
   ExamEvent,
   ExamEventType,
   ExamPublication,
+  ExamInstance,
   ExportRecord,
   Question,
   Quiz,
@@ -57,7 +62,7 @@ type AppContextValue = {
     publicationId: string,
     name: string,
     email: string,
-  ) => { attemptId?: string; error?: string };
+  ) => Promise<{ attemptId?: string; error?: string }>;
   updateExamAttempt: (id: string, patch: Partial<ExamAttempt>) => void;
   addExamEvent: (
     event: Omit<ExamEvent, "id" | "createdAt">,
@@ -158,6 +163,19 @@ function normalizeState(stored: Partial<QuizState>): QuizState {
     exports: stored.exports ?? [],
     examPublications: (stored.examPublications ?? []).map((publication) => ({
       ...publication,
+      randomization: {
+        ...defaultExamRandomizationConfig(),
+        ...(publication.randomization ?? {}),
+        questionCountByTopic: {
+          ...(publication.randomization?.questionCountByTopic ?? {}),
+        },
+        requiredQuestionIds: [
+          ...(publication.randomization?.requiredQuestionIds ?? []),
+        ],
+        lockedQuestionIds: [
+          ...(publication.randomization?.lockedQuestionIds ?? []),
+        ],
+      },
       availableFrom: publication.availableFrom ?? "",
       availableUntil: publication.availableUntil ?? "",
     })),
@@ -489,6 +507,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               maxViolations: 2,
               active: true,
               sendResults: true,
+              randomization: defaultExamRandomizationConfig(),
               availableFrom: "",
               availableUntil: "",
               createdAt: new Date().toISOString(),
@@ -538,7 +557,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const startExamAttempt = useCallback(
-    (publicationId: string, name: string, email: string) => {
+    async (publicationId: string, name: string, email: string) => {
       const publication = state.examPublications.find(
         (item) => item.id === publicationId,
       );
@@ -583,6 +602,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const attemptId = makeId("attempt");
       const eventId = makeId("event");
       const startedAt = new Date().toISOString();
+      const quiz = state.quizzes.find(
+        (item) => item.id === publication.quizId,
+      );
+      if (!quiz) {
+        return { error: "Das zugehörige Quiz wurde nicht gefunden." };
+      }
+      const questions = quiz.questionIds
+        .map((id) =>
+          state.questions.find((question) => question.id === id),
+        )
+        .filter((question): question is Question => Boolean(question));
+      const validationErrors = validateExamRandomization(
+        quiz,
+        questions,
+        state.topics,
+        publication.randomization,
+      );
+      if (validationErrors.length) {
+        return { error: validationErrors[0].message };
+      }
+      const previousInstance = state.examAttempts.find(
+        (attempt) =>
+          attempt.publicationId === publicationId &&
+          attempt.email.toLowerCase() === normalizedEmail &&
+          attempt.status === "reset" &&
+          attempt.instance,
+      )?.instance;
+      let instance: ExamInstance;
+      try {
+        const response = await fetch("/api/exam-attempts/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            attemptId,
+            publicationId,
+            name: name.trim(),
+            email: normalizedEmail,
+            quiz,
+            questions,
+            topics: state.topics,
+            config: publication.randomization,
+            previousInstance,
+          }),
+        });
+        const data = (await response.json()) as {
+          instance?: ExamInstance;
+          error?: string;
+        };
+        if (!response.ok || !data.instance) {
+          return {
+            error:
+              data.error ?? "Die Prüfungsinstanz konnte nicht erzeugt werden.",
+          };
+        }
+        instance = data.instance;
+      } catch {
+        return {
+          error:
+            "Die Prüfungsinstanz konnte nicht erzeugt werden. Prüfe die Serververbindung.",
+        };
+      }
       const attempt: ExamAttempt = {
         id: attemptId,
         publicationId,
@@ -599,6 +679,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         topicResults: [],
         violationCount: 0,
         resultEmailStatus: "pending",
+        instance,
       };
       setState((current) => ({
         ...current,
@@ -617,7 +698,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
       return { attemptId };
     },
-    [state.examAttempts, state.examPublications],
+    [
+      state.examAttempts,
+      state.examPublications,
+      state.questions,
+      state.quizzes,
+      state.topics,
+    ],
   );
 
   const updateExamAttempt = useCallback(

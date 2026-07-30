@@ -130,7 +130,41 @@ export async function POST(request: Request) {
         availableUntil: publication.availableUntil || null,
       })),
     );
-    await upsert(current.client, "exam_attempts", state.examAttempts);
+    await upsert(
+      current.client,
+      "exam_attempts",
+      state.examAttempts.map((attempt) => {
+        const row = { ...attempt };
+        delete row.instance;
+        return row;
+      }),
+    );
+    await upsert(
+      current.client,
+      "exam_instances",
+      state.examAttempts.flatMap((attempt) =>
+        attempt.instance
+          ? [
+              {
+                id: attempt.instance.id,
+                attemptId: attempt.instance.attemptId,
+                publicationId: attempt.instance.publicationId,
+                quizId: attempt.instance.quizId,
+                studentKey: attempt.instance.studentKey,
+                questionOrder: attempt.instance.questionOrder,
+                topicOrder: attempt.instance.topicOrder,
+                answerOrderByQuestionId:
+                  attempt.instance.answerOrderByQuestionId,
+                snapshot: attempt.instance,
+                seed: attempt.instance.seed,
+                generatedAt: attempt.instance.generatedAt,
+                previousAttemptId:
+                  attempt.instance.previousAttemptId ?? null,
+              },
+            ]
+          : [],
+      ),
+    );
     await upsert(current.client, "exam_events", state.examEvents);
     return Response.json({ synced: true, syncedAt: new Date().toISOString() });
   } catch (error) {

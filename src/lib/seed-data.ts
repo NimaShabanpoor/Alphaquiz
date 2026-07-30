@@ -1,4 +1,5 @@
 import type { QuizState } from "@/lib/quiz-types";
+import { defaultExamRandomizationConfig } from "@/lib/exam-randomization";
 
 export const seedState: QuizState = {
   categories: [
@@ -159,6 +160,7 @@ export const seedState: QuizState = {
       maxViolations: 2,
       active: true,
       sendResults: true,
+      randomization: defaultExamRandomizationConfig(),
       availableFrom: "",
       availableUntil: "",
       createdAt: "2026-07-29T09:00:00.000Z",

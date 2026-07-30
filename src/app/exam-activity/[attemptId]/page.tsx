@@ -14,6 +14,7 @@ import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useQuizApp } from "@/components/app-provider";
 import { EmptyState, PageHeader, ui } from "@/components/ui";
+import { examTopicId } from "@/lib/exam-randomization";
 import { calculateQuestionScore } from "@/lib/exam-scoring";
 import type { Question } from "@/lib/quiz-types";
 import { questionTypeLabels } from "@/lib/quiz-types";
@@ -49,13 +50,14 @@ export default function ExamAttemptResultPage() {
   const quiz = state.quizzes.find(
     (item) => item.id === publication?.quizId,
   );
-  const questions = useMemo(
+  const quizQuestions = useMemo(
     () =>
       quiz?.questionIds
         .map((id) => state.questions.find((question) => question.id === id))
         .filter((question): question is Question => Boolean(question)) ?? [],
     [quiz, state.questions],
   );
+  const questions = attempt?.instance?.questions ?? quizQuestions;
   const questionResults = useMemo(
     () =>
       questions.map((question, index) => {
@@ -66,7 +68,7 @@ export default function ExamAttemptResultPage() {
           question,
           index,
           score,
-          correct: score === question.points,
+          correct: question.points > 0 && score === question.points,
           response: attempt?.responses[question.id] ?? [],
         };
       }),
@@ -128,7 +130,9 @@ export default function ExamAttemptResultPage() {
             {attempt.score} von {attempt.possible} Punkten
           </h2>
           <p>
-            {mistakes.length} von {questions.length} Fragen falsch beantwortet
+            {questions.length
+              ? `${mistakes.length} von ${questions.length} Fragen falsch beantwortet`
+              : "Keine Fragen konnten ausgewertet werden"}
           </p>
         </div>
         <dl className={styles.meta}>
@@ -206,7 +210,15 @@ export default function ExamAttemptResultPage() {
           </div>
         </header>
 
-        {visibleResults.length ? (
+        {!questionResults.length ? (
+          <div className={`${ui.card} ${styles.noEvaluation}`}>
+            <XCircle aria-hidden="true" />
+            <span>
+              <strong>Keine Fragen wurden ausgewertet.</strong>
+              <small>0 von 0 gilt als nicht bestanden.</small>
+            </span>
+          </div>
+        ) : visibleResults.length ? (
           <div className={styles.questionList}>
             {visibleResults.map(
               ({ question, index, score, correct, response }) => (
@@ -226,9 +238,17 @@ export default function ExamAttemptResultPage() {
                     <span>
                       <small>
                         Frage {index + 1} ·{" "}
-                        {state.topics.find(
-                          (topic) => topic.id === question.topicId,
-                        )?.name ?? "Ohne Unterkategorie"}{" "}
+                        {attempt.instance?.topicLabelById[
+                          examTopicId(
+                            question,
+                            attempt.instance.quizSnapshot,
+                            attempt.instance.configSnapshot.useTopics,
+                          )
+                        ] ??
+                          state.topics.find(
+                            (topic) => topic.id === question.topicId,
+                          )?.name ??
+                          "Ohne Unterkategorie"}{" "}
                         · {questionTypeLabels[question.type]}
                       </small>
                       <h3>{question.title}</h3>

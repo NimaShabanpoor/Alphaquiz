@@ -292,7 +292,27 @@
   padding: var(--sp-6);
 }
 
-.noErrors svg {
+.noEvaluation {
+  align-items: center;
+  background: var(--red-soft);
+  color: var(--red);
+  display: flex;
+  gap: var(--sp-3);
+  justify-content: center;
+  padding: var(--sp-5);
+}
+
+.noEvaluation > span {
+  display: grid;
+}
+
+.noEvaluation small {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+
+.noErrors svg,
+.noEvaluation svg {
   height: 24px;
   width: 24px;
 }

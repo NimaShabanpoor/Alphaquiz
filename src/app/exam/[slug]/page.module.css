@@ -239,6 +239,11 @@
   width: 100%;
 }
 
+.startButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .privacy {
   align-items: center;
   color: #69778c;

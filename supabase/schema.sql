@@ -77,6 +77,15 @@ create table if not exists public.exam_publications (
   "maxViolations" integer not null default 2,
   active boolean not null default true,
   "sendResults" boolean not null default true,
+  randomization jsonb not null default '{
+    "questionOrderMode":"fixed",
+    "useTopics":true,
+    "questionCountByTopic":{},
+    "shuffleAnswers":false,
+    "requiredQuestionIds":[],
+    "lockedQuestionIds":[],
+    "retryMode":"regenerate"
+  }'::jsonb,
   "availableFrom" timestamptz,
   "availableUntil" timestamptz,
   "createdAt" timestamptz not null default now()
@@ -84,7 +93,16 @@ create table if not exists public.exam_publications (
 
 alter table public.exam_publications
   add column if not exists "availableFrom" timestamptz,
-  add column if not exists "availableUntil" timestamptz;
+  add column if not exists "availableUntil" timestamptz,
+  add column if not exists randomization jsonb not null default '{
+    "questionOrderMode":"fixed",
+    "useTopics":true,
+    "questionCountByTopic":{},
+    "shuffleAnswers":false,
+    "requiredQuestionIds":[],
+    "lockedQuestionIds":[],
+    "retryMode":"regenerate"
+  }'::jsonb;
 
 create table if not exists public.exam_attempts (
   id text primary key,
@@ -105,6 +123,25 @@ create table if not exists public.exam_attempts (
   "resultEmailStatus" text not null default 'pending'
 );
 
+create unique index if not exists exam_attempts_one_active_per_email
+  on public.exam_attempts ("publicationId", lower(email))
+  where status <> 'reset';
+
+create table if not exists public.exam_instances (
+  id text primary key,
+  "attemptId" text not null unique references public.exam_attempts(id) on delete cascade,
+  "publicationId" text not null references public.exam_publications(id) on delete cascade,
+  "quizId" text not null,
+  "studentKey" text not null,
+  "questionOrder" jsonb not null,
+  "topicOrder" jsonb not null,
+  "answerOrderByQuestionId" jsonb not null,
+  snapshot jsonb not null,
+  seed text not null,
+  "generatedAt" timestamptz not null default now(),
+  "previousAttemptId" text
+);
+
 create table if not exists public.exam_events (
   id text primary key,
   "publicationId" text not null references public.exam_publications(id) on delete cascade,
@@ -123,6 +160,7 @@ alter table public.quiz_questions enable row level security;
 alter table public.exports enable row level security;
 alter table public.exam_publications enable row level security;
 alter table public.exam_attempts enable row level security;
+alter table public.exam_instances enable row level security;
 alter table public.exam_events enable row level security;
 
 grant usage on schema public to service_role;
@@ -135,4 +173,5 @@ grant all privileges on table public.quiz_questions to service_role;
 grant all privileges on table public.exports to service_role;
 grant all privileges on table public.exam_publications to service_role;
 grant all privileges on table public.exam_attempts to service_role;
+grant all privileges on table public.exam_instances to service_role;
 grant all privileges on table public.exam_events to service_role;

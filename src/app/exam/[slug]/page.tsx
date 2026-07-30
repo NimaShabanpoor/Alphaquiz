@@ -23,6 +23,7 @@ import {
 } from "react";
 import { useQuizApp } from "@/components/app-provider";
 import { ui } from "@/components/ui";
+import { examTopicId } from "@/lib/exam-randomization";
 import { calculateExamResult } from "@/lib/exam-scoring";
 import type {
   ExamAttemptStatus,
@@ -55,7 +56,7 @@ export default function PublicExamPage() {
   const quiz = state.quizzes.find(
     (item) => item.id === publication?.quizId,
   );
-  const questions = useMemo(
+  const quizQuestions = useMemo(
     () =>
       quiz?.questionIds
         .map((id) => state.questions.find((question) => question.id === id))
@@ -73,12 +74,14 @@ export default function PublicExamPage() {
         ) ?? ""),
   );
   const [error, setError] = useState("");
+  const [starting, setStarting] = useState(false);
   const [warning, setWarning] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const finishingRef = useRef(false);
   const lastViolationRef = useRef(0);
   const attempt = state.examAttempts.find((item) => item.id === attemptId);
+  const questions = attempt?.instance?.questions ?? quizQuestions;
   const question = questions[attempt?.currentQuestion ?? 0];
 
   useEffect(() => {
@@ -139,7 +142,7 @@ export default function PublicExamPage() {
       }
       finishingRef.current = true;
       const result = calculateExamResult(
-        quiz,
+        attempt.instance?.quizSnapshot ?? quiz,
         questions,
         state.topics,
         attempt.responses,
@@ -271,20 +274,29 @@ export default function PublicExamPage() {
       setError("Bitte bestätige zuerst die Prüfungsregeln.");
       return;
     }
-    const result = startExamAttempt(publication.id, name, normalizedEmail);
-    if (!result.attemptId) {
-      setError(result.error ?? "Die Prüfung konnte nicht gestartet werden.");
-      return;
-    }
-    window.sessionStorage.setItem(
-      `alphaquiz-attempt-${publication.slug}`,
-      result.attemptId,
-    );
-    setAttemptId(result.attemptId);
-    if (publication.mode === "closed" && !document.fullscreenElement) {
-      await document.documentElement.requestFullscreen().catch(() => {
-        setWarning(true);
-      });
+    setStarting(true);
+    try {
+      const result = await startExamAttempt(
+        publication.id,
+        name,
+        normalizedEmail,
+      );
+      if (!result.attemptId) {
+        setError(result.error ?? "Die Prüfung konnte nicht gestartet werden.");
+        return;
+      }
+      window.sessionStorage.setItem(
+        `alphaquiz-attempt-${publication.slug}`,
+        result.attemptId,
+      );
+      setAttemptId(result.attemptId);
+      if (publication.mode === "closed" && !document.fullscreenElement) {
+        await document.documentElement.requestFullscreen().catch(() => {
+          setWarning(true);
+        });
+      }
+    } finally {
+      setStarting(false);
     }
   }
 
@@ -461,10 +473,11 @@ export default function PublicExamPage() {
             {error ? <p className={styles.error}>{error}</p> : null}
             <button
               className={styles.startButton}
+              disabled={starting}
               onClick={() => void start()}
               type="button"
             >
-              Prüfung starten
+              {starting ? "Prüfung wird vorbereitet …" : "Prüfung starten"}
             </button>
             <small className={styles.privacy}>
               <LockKeyhole aria-hidden="true" /> Deine Angaben werden sicher
@@ -555,8 +568,17 @@ export default function PublicExamPage() {
             </div>
             <div className={styles.questionBody}>
               <p className={styles.eyebrow}>
-                {state.topics.find((topic) => topic.id === question.topicId)
-                  ?.name ?? "Ohne Thema"}{" "}
+                {attempt.instance?.topicLabelById[
+                  examTopicId(
+                    question,
+                    attempt.instance.quizSnapshot,
+                    attempt.instance.configSnapshot.useTopics,
+                  )
+                ] ??
+                  state.topics.find(
+                    (topic) => topic.id === question.topicId,
+                  )?.name ??
+                  "Ohne Unterkategorie"}{" "}
                 · {questionTypeLabels[question.type]} · {question.points}{" "}
                 {question.points === 1 ? "Punkt" : "Punkte"}
               </p>
