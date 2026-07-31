@@ -1,33 +1,17 @@
 "use client";
 
-import {
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  CheckCircle2,
-  Clock3,
-  LockKeyhole,
-  Mail,
-  ShieldCheck,
-  XCircle,
-} from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
+import { BookOpen, Clock3, LockKeyhole, ShieldCheck, XCircle } from "lucide-react";
 import { useParams } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import { ui } from "@/components/ui";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ExamEventType,
   PublicExamAttempt,
   PublicExamMetadata,
 } from "@/lib/quiz-types";
-import { questionTypeLabels } from "@/lib/quiz-types";
+import { ExamPlayer } from "./exam-player";
+import { ExamRegistration } from "./exam-registration";
+import { ExamResult } from "./exam-result";
+import { ExamWarning } from "./exam-warning";
 import styles from "./page.module.css";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -440,271 +424,44 @@ export default function PublicExamPage() {
 
       <main className={styles.content}>
         {!attempt ? (
-          <section className={styles.registration}>
-            <div className={styles.registrationBrand}>
-              <span className={styles.brandMark}>A</span>
-              <span>
-                <strong>ALPHAQUIZ.</strong>
-                <small>QUIZ-MANAGER</small>
-              </span>
-            </div>
-            <p className={styles.eyebrow}>Online-Prüfung</p>
-            <h1>Zur Prüfung anmelden</h1>
-            <p className={styles.lead}>
-              Gib deinen Namen und deine E-Mail-Adresse ein. Es ist kein
-              Passwort erforderlich.
-            </p>
-            <label className={styles.field}>
-              <span>Vor- und Nachname</span>
-              <input
-                autoComplete="name"
-                maxLength={120}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Max Muster"
-                value={name}
-              />
-            </label>
-            <label className={styles.field}>
-              <span>E-Mail-Adresse</span>
-              <input
-                autoComplete="email"
-                maxLength={254}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="max.muster@beispiel.ch"
-                required
-                type="email"
-                value={email}
-              />
-            </label>
-            <div className={styles.examInfo}>
-              {exam.mode === "closed" ? (
-                <ShieldCheck aria-hidden="true" />
-              ) : (
-                <BookOpen aria-hidden="true" />
-              )}
-              <span>
-                <strong>{exam.title}</strong>
-                <small>
-                  {exam.timeLimit} Minuten · {exam.questionCount} Fragen ·{" "}
-                  {exam.passPercentage} % zum Bestehen
-                  {exam.availableUntil
-                    ? ` · offen bis ${new Date(
-                        exam.availableUntil,
-                      ).toLocaleString("de-CH")}`
-                    : ""}
-                </small>
-              </span>
-              <span className={ui.pill}>1 Versuch</span>
-            </div>
-            <label className={styles.rules}>
-              <input
-                checked={accepted}
-                onChange={(event) => setAccepted(event.target.checked)}
-                type="checkbox"
-              />
-              <span>
-                Ich habe die Prüfungsregeln gelesen.{" "}
-                {exam.mode === "closed"
-                  ? "Tabwechsel und das Verlassen des Vollbilds werden protokolliert."
-                  : "Diese Prüfung ist als Open Book freigegeben."}
-              </span>
-            </label>
-            {error ? <p className={styles.error}>{error}</p> : null}
-            <button
-              className={styles.startButton}
-              disabled={starting}
-              onClick={() => void start()}
-              type="button"
-            >
-              {starting ? "Prüfung wird vorbereitet …" : "Prüfung starten"}
-            </button>
-            <small className={styles.privacy}>
-              <LockKeyhole aria-hidden="true" /> Deine Angaben werden nur für
-              diese Prüfung verarbeitet. <Link href="/privacy">Datenschutz</Link>
-            </small>
-          </section>
+          <ExamRegistration
+            accepted={accepted}
+            email={email}
+            error={error}
+            exam={exam}
+            name={name}
+            onAcceptedChange={setAccepted}
+            onEmailChange={setEmail}
+            onNameChange={setName}
+            onStart={() => void start()}
+            starting={starting}
+          />
         ) : resultFinished ? (
-          <section className={styles.result}>
-            <span className={styles.resultIcon} data-passed={attempt.passed}>
-              {attempt.passed ? (
-                <CheckCircle2 aria-hidden="true" />
-              ) : (
-                <XCircle aria-hidden="true" />
-              )}
-            </span>
-            <p className={styles.eyebrow}>
-              {attempt.status === "terminated"
-                ? "Prüfung beendet"
-                : "Prüfung abgeschlossen"}
-            </p>
-            <h1>
-              {attempt.score} von {attempt.possible} Punkten
-            </h1>
-            <p className={styles.resultLead}>
-              {attempt.percentage} % ·{" "}
-              <strong>
-                {attempt.passed ? "Bestanden" : "Nicht bestanden"}
-              </strong>
-            </p>
-            {attempt.status === "terminated" ? (
-              <div className={styles.terminated}>
-                <AlertTriangle aria-hidden="true" />
-                Die Prüfung wurde wegen eines Regelverstosses automatisch
-                beendet.
-              </div>
-            ) : null}
-            {attempt.topicResults.length ? (
-              <div className={styles.topicResults}>
-                {attempt.topicResults.map((topicResult) => (
-                  <div key={topicResult.topicId}>
-                    <span>
-                      <strong>{topicResult.name}</strong>
-                      <small>
-                        {topicResult.score}/{topicResult.possible} Punkte ·
-                        mindestens {topicResult.required} %
-                      </small>
-                    </span>
-                    <span
-                      className={ui.pill}
-                      data-tone={topicResult.passed ? "ready" : "draft"}
-                    >
-                      {topicResult.percentage} % ·{" "}
-                      {topicResult.passed ? "Bestanden" : "Nicht bestanden"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            {exam.sendResults ? (
-              <p className={styles.mailStatus}>
-                <Mail aria-hidden="true" />
-                {attempt.resultEmailStatus === "sent"
-                  ? "Das Ergebnis wurde per E-Mail versendet."
-                  : attempt.resultEmailStatus === "not-configured"
-                    ? "Der E-Mail-Versand ist noch nicht konfiguriert. Das Ergebnis wurde gespeichert."
-                    : attempt.resultEmailStatus === "failed"
-                      ? "Das Ergebnis wurde gespeichert, die E-Mail konnte aber nicht versendet werden."
-                      : "Die Ergebnis-E-Mail wird vorbereitet …"}
-              </p>
-            ) : null}
-          </section>
+          <ExamResult attempt={attempt} exam={exam} />
         ) : question ? (
-          <section className={styles.player}>
-            <div className={styles.progressHead}>
-              <span>
-                Frage {attempt.currentQuestion + 1} von {questions.length}
-              </span>
-              <div>
-                <span
-                  style={{
-                    width: `${
-                      ((attempt.currentQuestion + 1) / questions.length) * 100
-                    }%`,
-                  }}
-                />
-              </div>
-            </div>
-            <div className={styles.questionBody}>
-              <p className={styles.eyebrow}>
-                {question.topicLabel} · {questionTypeLabels[question.type]} ·{" "}
-                {question.points} {question.points === 1 ? "Punkt" : "Punkte"}
-              </p>
-              <h1>{question.title}</h1>
-              {question.image ? (
-                <figure className={styles.questionImage}>
-                  <Image
-                    alt={question.image.alt || "Bild zur Frage"}
-                    height={520}
-                    priority
-                    src={question.image.dataUrl}
-                    unoptimized
-                    width={900}
-                  />
-                  {question.image.alt ? (
-                    <figcaption>{question.image.alt}</figcaption>
-                  ) : null}
-                </figure>
-              ) : null}
-              <p className={styles.questionDescription}>
-                {question.description ||
-                  (question.type === "multiple"
-                    ? "Mehrere Antworten können richtig sein."
-                    : "Wähle die passende Antwort.")}
-              </p>
-              {question.type === "text" ? (
-                <textarea
-                  maxLength={10_000}
-                  onBlur={(event) =>
-                    void saveResponse(question.id, [event.target.value])
-                  }
-                  onChange={(event) => {
-                    const current = attemptRef.current;
-                    if (!current) return;
-                    setAttempt({
-                      ...current,
-                      responses: {
-                        ...current.responses,
-                        [question.id]: [event.target.value],
-                      },
-                    });
-                  }}
-                  placeholder="Antwort eingeben …"
-                  value={attempt.responses[question.id]?.[0] ?? ""}
-                />
-              ) : (
-                <div className={styles.options}>
-                  {question.answers.map((answer, answerIndex) => {
-                    const selected = (
-                      attempt.responses[question.id] ?? []
-                    ).includes(answer.id);
-                    return (
-                      <button
-                        aria-pressed={selected}
-                        data-selected={selected}
-                        key={answer.id}
-                        onClick={() => choose(answer.id)}
-                        type="button"
-                      >
-                        <span>{String.fromCharCode(65 + answerIndex)}</span>
-                        {answer.text}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {error ? <p className={styles.error}>{error}</p> : null}
-              <div className={styles.actions}>
-                <button
-                  disabled={attempt.currentQuestion === 0 || saving}
-                  onClick={() =>
-                    void moveTo(attempt.currentQuestion - 1)
-                  }
-                  type="button"
-                >
-                  <ArrowLeft aria-hidden="true" /> Zurück
-                </button>
-                <button
-                  className={styles.primaryAction}
-                  disabled={saving}
-                  onClick={() => {
-                    if (attempt.currentQuestion === questions.length - 1) {
-                      void finishExam();
-                    } else {
-                      void moveTo(attempt.currentQuestion + 1);
-                    }
-                  }}
-                  type="button"
-                >
-                  {attempt.currentQuestion === questions.length - 1
-                    ? saving
-                      ? "Wird abgegeben …"
-                      : "Prüfung abgeben"
-                    : "Weiter"}
-                  <ArrowRight aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-          </section>
+          <ExamPlayer
+            attempt={attempt}
+            error={error}
+            onChoose={choose}
+            onFinish={() => void finishExam()}
+            onMove={(questionIndex) => void moveTo(questionIndex)}
+            onTextChange={(questionId, value) => {
+              const current = attemptRef.current;
+              if (!current) return;
+              setAttempt({
+                ...current,
+                responses: {
+                  ...current.responses,
+                  [questionId]: [value],
+                },
+              });
+            }}
+            onTextSave={(questionId, value) =>
+              void saveResponse(questionId, [value])
+            }
+            question={question}
+            saving={saving}
+          />
         ) : (
           <section className={styles.centerState}>
             <XCircle aria-hidden="true" />
@@ -715,32 +472,11 @@ export default function PublicExamPage() {
       </main>
 
       {warning && attempt?.status === "in-progress" ? (
-        <div className={styles.warningBackdrop}>
-          <section
-            aria-labelledby="violation-title"
-            aria-modal="true"
-            className={styles.warningModal}
-            role="dialog"
-          >
-            <span>
-              <AlertTriangle aria-hidden="true" />
-            </span>
-            <h2 id="violation-title">Tabwechsel erkannt</h2>
-            <p>
-              Du hast den Prüfungstab oder das Vollbild verlassen. Der Verstoss
-              wurde gespeichert und dem Administrator gemeldet.
-            </p>
-            <strong>
-              Verstoss {attempt.violationCount} von {exam.maxViolations}
-            </strong>
-            <button onClick={() => void continueAfterWarning()} type="button">
-              Prüfung fortsetzen
-            </button>
-            <small>
-              Der nächste Verstoss kann die Prüfung automatisch beenden.
-            </small>
-          </section>
-        </div>
+        <ExamWarning
+          maxViolations={exam.maxViolations}
+          onContinue={() => void continueAfterWarning()}
+          violationCount={attempt.violationCount}
+        />
       ) : null}
     </div>
   );

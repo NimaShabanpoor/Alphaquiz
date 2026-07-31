@@ -1,37 +1,36 @@
 "use client";
 
-import {
-  defaultExamRandomizationConfig,
-  validateExamRandomization,
-} from "@/lib/exam-randomization";
+import { defaultExamRandomizationConfig } from "@/lib/exam-randomization";
 import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import {
+  clearLocalAdminState,
+  useAdminStateSync,
+} from "@/hooks/use-admin-state-sync";
+import {
+  deleteExamPublicationFromState,
+  deleteQuestionFromState,
+  deleteQuizFromState,
+} from "@/lib/quiz-state-mutations";
 import { seedState } from "@/lib/seed-data";
 import type {
   Category,
   ExamAttempt,
   ExamAttemptStatus,
-  ExamEvent,
   ExamEventType,
   ExamPublication,
-  ExamInstance,
   ExportRecord,
   Question,
   Quiz,
   QuizState,
   Topic,
 } from "@/lib/quiz-types";
-
-const STORAGE_KEY = "alphaquiz-state-v2";
-const LEGACY_STORAGE_KEY = "alphaquiz-state-v1";
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type AppContextValue = {
   state: QuizState;
@@ -58,15 +57,7 @@ type AppContextValue = {
     patch: Partial<ExamPublication>,
   ) => void;
   deleteExamPublication: (id: string) => void;
-  startExamAttempt: (
-    publicationId: string,
-    name: string,
-    email: string,
-  ) => Promise<{ attemptId?: string; error?: string }>;
   updateExamAttempt: (id: string, patch: Partial<ExamAttempt>) => void;
-  addExamEvent: (
-    event: Omit<ExamEvent, "id" | "createdAt">,
-  ) => string;
   resetExamAttempt: (id: string) => void;
   importQuestions: (questions: Question[], categories: Category[]) => number;
   recordExport: (record: Omit<ExportRecord, "id" | "createdAt">) => void;
@@ -91,291 +82,17 @@ function slugify(value: string) {
   );
 }
 
-function normalizeState(stored: Partial<QuizState>): QuizState {
-  const categories = Array.isArray(stored.categories)
-    ? stored.categories
-    : seedState.categories;
-  const sourceTopics = Array.isArray(stored.topics)
-    ? stored.topics
-    : seedState.topics.filter((topic) =>
-        categories.some((category) => category.id === topic.categoryId),
-      );
-  const topics = [...sourceTopics];
-
-  for (const category of categories) {
-    if (!topics.some((topic) => topic.categoryId === category.id)) {
-      topics.push({
-        id: `topic-${category.id}-allgemein`,
-        categoryId: category.id,
-        name: "Allgemein",
-      });
-    }
-  }
-
-  const questions = (stored.questions ?? seedState.questions).map(
-    (question) => ({
-      ...question,
-      image:
-        question.image?.dataUrl && question.image?.fileName
-          ? {
-              dataUrl: question.image.dataUrl,
-              fileName: question.image.fileName,
-              alt: question.image.alt ?? "",
-            }
-          : undefined,
-      topicId:
-        question.topicId &&
-        topics.some(
-          (topic) =>
-            topic.id === question.topicId &&
-            topic.categoryId === question.categoryId,
-        )
-          ? question.topicId
-          : (() => {
-              const seedTopicId = seedState.questions.find(
-                (seedQuestion) => seedQuestion.id === question.id,
-              )?.topicId;
-              return (
-                topics.find((topic) => topic.id === seedTopicId)?.id ??
-                topics.find(
-                  (topic) => topic.categoryId === question.categoryId,
-                )?.id ??
-                ""
-              );
-            })(),
-    }),
-  );
-  const quizzes = (stored.quizzes ?? seedState.quizzes).map((quiz) => ({
-    ...quiz,
-    passPercentage: quiz.passPercentage ?? 70,
-    scoringMode: quiz.scoringMode ?? "combined",
-    topicPassPercentages: quiz.topicPassPercentages ?? {},
-    hiddenTopicIds: Array.isArray(quiz.hiddenTopicIds)
-      ? quiz.hiddenTopicIds
-      : [],
-  }));
-
-  return {
-    categories,
-    topics,
-    questions,
-    quizzes,
-    exports: stored.exports ?? [],
-    examPublications: (stored.examPublications ?? []).map((publication) => ({
-      ...publication,
-      randomization: {
-        ...defaultExamRandomizationConfig(),
-        ...(publication.randomization ?? {}),
-        questionCountByTopic: {
-          ...(publication.randomization?.questionCountByTopic ?? {}),
-        },
-        requiredQuestionIds: [
-          ...(publication.randomization?.requiredQuestionIds ?? []),
-        ],
-        lockedQuestionIds: [
-          ...(publication.randomization?.lockedQuestionIds ?? []),
-        ],
-      },
-      availableFrom: publication.availableFrom ?? "",
-      availableUntil: publication.availableUntil ?? "",
-    })),
-    examAttempts: stored.examAttempts ?? [],
-    examEvents: stored.examEvents ?? [],
-  };
-}
-
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<QuizState>(seedState);
-  const [ready, setReady] = useState(false);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<number | null>(null);
-  const lastExternalEventRef = useRef("");
-  const persistedState = useMemo<QuizState>(
-    () => ({
-      categories: state.categories,
-      topics: state.topics,
-      questions: state.questions,
-      quizzes: state.quizzes,
-      exports: state.exports,
-      examPublications: state.examPublications,
-      examAttempts: [],
-      examEvents: [],
-    }),
-    [
-      state.categories,
-      state.examPublications,
-      state.exports,
-      state.questions,
-      state.quizzes,
-      state.topics,
-    ],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadInitialState() {
-      let nextState: QuizState = seedState;
-      if (!window.location.pathname.startsWith("/exam/")) {
-        try {
-          const stored =
-            window.localStorage.getItem(STORAGE_KEY) ??
-            window.localStorage.getItem(LEGACY_STORAGE_KEY);
-          if (stored) nextState = normalizeState(JSON.parse(stored));
-        } catch {
-          window.localStorage.removeItem(STORAGE_KEY);
-          window.localStorage.removeItem(LEGACY_STORAGE_KEY);
-        }
-
-        try {
-          const response = await fetch("/api/supabase?state=1", {
-            cache: "no-store",
-          });
-          const data = (await response.json()) as {
-            state?: QuizState;
-          };
-          const remote = data.state;
-          if (
-            response.ok &&
-            remote &&
-            (remote.quizzes.length ||
-              remote.questions.length ||
-              remote.categories.length ||
-              remote.examPublications.length)
-          ) {
-            nextState = normalizeState(remote);
-          }
-        } catch {
-          // Offline bleibt der zuletzt lokal gespeicherte Admin-Inhalt verfügbar.
-        }
-      }
-
-      if (cancelled) return;
-      setState(nextState);
-      setReady(true);
-    }
-
-    void loadInitialState();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (window.location.pathname.startsWith("/exam/")) return;
-    if (!ready) return;
-    let quotaTimer: number | undefined;
-    try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(persistedState),
-      );
-    } catch {
-      quotaTimer = window.setTimeout(
-        () =>
-          setToast(
-            "Der lokale Speicher ist voll. Entferne grosse Bilder oder synchronisiere mit Supabase.",
-          ),
-        0,
-      );
-    }
-    return () => {
-      if (quotaTimer) window.clearTimeout(quotaTimer);
-    };
-  }, [persistedState, ready]);
-
-  useEffect(() => {
-    if (!ready || window.location.pathname.startsWith("/exam/")) return;
-    const timer = window.setTimeout(() => {
-      void fetch("/api/supabase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(persistedState),
-      });
-    }, 1500);
-    return () => window.clearTimeout(timer);
-  }, [persistedState, ready]);
-
-  useEffect(() => {
-    if (!ready || window.location.pathname.startsWith("/exam/")) return;
-    let cancelled = false;
-
-    async function refreshActivity() {
-      try {
-        const response = await fetch("/api/supabase?activity=1", {
-          cache: "no-store",
-        });
-        const data = (await response.json()) as {
-          attempts?: ExamAttempt[];
-          events?: ExamEvent[];
-        };
-        if (!response.ok || cancelled || !data.attempts || !data.events) return;
-        setState((current) => ({
-          ...current,
-          examAttempts: data.attempts!,
-          examEvents: data.events!,
-        }));
-        const newest = data.events.find(
-          (event) =>
-            event.type === "tab-hidden" ||
-            event.type === "fullscreen-exit",
-        );
-        if (newest && newest.id !== lastExternalEventRef.current) {
-          lastExternalEventRef.current = newest.id;
-          const participant = data.attempts.find(
-            (attempt) => attempt.id === newest.attemptId,
-          );
-          setToast(
-            `Prüfungswarnung: ${participant?.name ?? "Teilnehmende Person"} – ${newest.message}`,
-          );
-        }
-      } catch {
-        // Ein kurzzeitiger Verbindungsfehler beendet die Admin-Oberfläche nicht.
-      }
-    }
-
-    void refreshActivity();
-    const timer = window.setInterval(() => void refreshActivity(), 5000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [ready]);
-
   const showToast = useCallback((message: string) => {
     setToast(message);
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(""), 3000);
   }, []);
 
-  useEffect(() => {
-    function syncFromAnotherTab(event: StorageEvent) {
-      if (event.key !== STORAGE_KEY || !event.newValue) return;
-      try {
-        const nextState = normalizeState(JSON.parse(event.newValue));
-        setState(nextState);
-        const newest = nextState.examEvents[0];
-        if (
-          newest &&
-          newest.id !== lastExternalEventRef.current &&
-          (newest.type === "tab-hidden" ||
-            newest.type === "fullscreen-exit")
-        ) {
-          lastExternalEventRef.current = newest.id;
-          const attempt = nextState.examAttempts.find(
-            (item) => item.id === newest.attemptId,
-          );
-          showToast(
-            `Prüfungswarnung: ${attempt?.name ?? "Teilnehmende Person"} – ${newest.message}`,
-          );
-        }
-      } catch {
-        // Ein beschädigter Eintrag in einem anderen Tab wird ignoriert.
-      }
-    }
-    window.addEventListener("storage", syncFromAnotherTab);
-    return () => window.removeEventListener("storage", syncFromAnotherTab);
-  }, [showToast]);
+  const ready = useAdminStateSync(state, setState, showToast);
 
   const createQuiz = useCallback(() => {
     const id = makeId("quiz");
@@ -413,16 +130,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteQuiz = useCallback((id: string) => {
-    setState((current) => ({
-      ...current,
-      quizzes: current.quizzes.filter((quiz) => quiz.id !== id),
-      exports: current.exports.filter((record) => record.quizId !== id),
-      examPublications: current.examPublications.map((publication) =>
-        publication.quizId === id
-          ? { ...publication, active: false }
-          : publication,
-      ),
-    }));
+    setState((current) => deleteQuizFromState(current, id));
   }, []);
 
   const createQuestion = useCallback((categoryId?: string, topicId?: string) => {
@@ -471,14 +179,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const deleteQuestion = useCallback((id: string) => {
-    setState((current) => ({
-      ...current,
-      questions: current.questions.filter((question) => question.id !== id),
-      quizzes: current.quizzes.map((quiz) => ({
-        ...quiz,
-        questionIds: quiz.questionIds.filter((questionId) => questionId !== id),
-      })),
-    }));
+    setState((current) => deleteQuestionFromState(current, id));
   }, []);
 
   const addQuestionToQuiz = useCallback((quizId: string, questionId: string) => {
@@ -644,26 +345,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const deleteExamPublication = useCallback((id: string) => {
-    setState((current) => {
-      const attemptIds = new Set(
-        current.examAttempts
-          .filter((attempt) => attempt.publicationId === id)
-          .map((attempt) => attempt.id),
-      );
-      return {
-        ...current,
-        examPublications: current.examPublications.filter(
-          (publication) => publication.id !== id,
-        ),
-        examAttempts: current.examAttempts.filter(
-          (attempt) => attempt.publicationId !== id,
-        ),
-        examEvents: current.examEvents.filter(
-          (event) =>
-            event.publicationId !== id && !attemptIds.has(event.attemptId),
-        ),
-      };
-    });
+    setState((current) => deleteExamPublicationFromState(current, id));
     void fetch(
       `/api/supabase?publicationId=${encodeURIComponent(id)}`,
       { method: "DELETE" },
@@ -674,157 +356,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const startExamAttempt = useCallback(
-    async (publicationId: string, name: string, email: string) => {
-      const publication = state.examPublications.find(
-        (item) => item.id === publicationId,
-      );
-      if (!publication?.active) {
-        return { error: "Diese Prüfung ist derzeit nicht freigeschaltet." };
-      }
-      const now = Date.now();
-      if (
-        publication.availableFrom &&
-        now < new Date(publication.availableFrom).getTime()
-      ) {
-        return { error: "Diese Prüfung ist noch nicht freigeschaltet." };
-      }
-      if (
-        publication.availableUntil &&
-        now > new Date(publication.availableUntil).getTime()
-      ) {
-        return { error: "Die Freigabe dieser Prüfung ist abgelaufen." };
-      }
-      const normalizedEmail = email.trim().toLowerCase();
-      if (!EMAIL_PATTERN.test(normalizedEmail)) {
-        return {
-          error:
-            "Bitte gib eine gültige E-Mail-Adresse ein, zum Beispiel name@firma.ch.",
-        };
-      }
-      const existing = state.examAttempts.find(
-        (attempt) =>
-          attempt.publicationId === publicationId &&
-          attempt.email.toLowerCase() === normalizedEmail &&
-          attempt.status !== "reset",
-      );
-      if (existing) {
-        return {
-          error:
-            existing.status === "in-progress"
-              ? "Für diese E-Mail-Adresse läuft bereits ein Versuch."
-              : "Für diese E-Mail-Adresse wurde der einzige Versuch bereits verwendet.",
-        };
-      }
-
-      const attemptId = makeId("attempt");
-      const eventId = makeId("event");
-      const startedAt = new Date().toISOString();
-      const quiz = state.quizzes.find(
-        (item) => item.id === publication.quizId,
-      );
-      if (!quiz) {
-        return { error: "Das zugehörige Quiz wurde nicht gefunden." };
-      }
-      const questions = quiz.questionIds
-        .map((id) =>
-          state.questions.find((question) => question.id === id),
-        )
-        .filter((question): question is Question => Boolean(question));
-      const validationErrors = validateExamRandomization(
-        quiz,
-        questions,
-        state.topics,
-        publication.randomization,
-      );
-      if (validationErrors.length) {
-        return { error: validationErrors[0].message };
-      }
-      const previousInstance = state.examAttempts.find(
-        (attempt) =>
-          attempt.publicationId === publicationId &&
-          attempt.email.toLowerCase() === normalizedEmail &&
-          attempt.status === "reset" &&
-          attempt.instance,
-      )?.instance;
-      let instance: ExamInstance;
-      try {
-        const response = await fetch("/api/exam-attempts/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            attemptId,
-            publicationId,
-            name: name.trim(),
-            email: normalizedEmail,
-            quiz,
-            questions,
-            topics: state.topics,
-            config: publication.randomization,
-            previousInstance,
-          }),
-        });
-        const data = (await response.json()) as {
-          instance?: ExamInstance;
-          error?: string;
-        };
-        if (!response.ok || !data.instance) {
-          return {
-            error:
-              data.error ?? "Die Prüfungsinstanz konnte nicht erzeugt werden.",
-          };
-        }
-        instance = data.instance;
-      } catch {
-        return {
-          error:
-            "Die Prüfungsinstanz konnte nicht erzeugt werden. Prüfe die Serververbindung.",
-        };
-      }
-      const attempt: ExamAttempt = {
-        id: attemptId,
-        publicationId,
-        name: name.trim(),
-        email: normalizedEmail,
-        status: "in-progress",
-        startedAt,
-        currentQuestion: 0,
-        responses: {},
-        score: 0,
-        possible: 0,
-        percentage: 0,
-        passed: false,
-        topicResults: [],
-        violationCount: 0,
-        resultEmailStatus: "pending",
-        instance,
-      };
-      setState((current) => ({
-        ...current,
-        examAttempts: [attempt, ...current.examAttempts],
-        examEvents: [
-          {
-            id: eventId,
-            publicationId,
-            attemptId,
-            type: "started",
-            message: "Prüfung gestartet",
-            createdAt: startedAt,
-          },
-          ...current.examEvents,
-        ],
-      }));
-      return { attemptId };
-    },
-    [
-      state.examAttempts,
-      state.examPublications,
-      state.questions,
-      state.quizzes,
-      state.topics,
-    ],
-  );
-
   const updateExamAttempt = useCallback(
     (id: string, patch: Partial<ExamAttempt>) => {
       setState((current) => ({
@@ -833,21 +364,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           attempt.id === id ? { ...attempt, ...patch } : attempt,
         ),
       }));
-    },
-    [],
-  );
-
-  const addExamEvent = useCallback(
-    (event: Omit<ExamEvent, "id" | "createdAt">) => {
-      const id = makeId("event");
-      setState((current) => ({
-        ...current,
-        examEvents: [
-          { ...event, id, createdAt: new Date().toISOString() },
-          ...current.examEvents,
-        ],
-      }));
-      return id;
     },
     [],
   );
@@ -974,8 +490,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const resetDemo = useCallback(() => {
     setState(seedState);
-    window.localStorage.removeItem(STORAGE_KEY);
-    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    clearLocalAdminState();
   }, []);
 
   const value = useMemo<AppContextValue>(
@@ -1001,9 +516,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createExamPublication,
       updateExamPublication,
       deleteExamPublication,
-      startExamAttempt,
       updateExamAttempt,
-      addExamEvent,
       resetExamAttempt,
       importQuestions,
       recordExport,
@@ -1031,9 +544,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createExamPublication,
       updateExamPublication,
       deleteExamPublication,
-      startExamAttempt,
       updateExamAttempt,
-      addExamEvent,
       resetExamAttempt,
       importQuestions,
       recordExport,
