@@ -120,8 +120,17 @@ create table if not exists public.exam_attempts (
   passed boolean not null default false,
   "topicResults" jsonb not null default '[]'::jsonb,
   "violationCount" integer not null default 0,
-  "resultEmailStatus" text not null default 'pending'
+  "resultEmailStatus" text not null default 'pending',
+  "accessTokenHash" text,
+  "updatedAt" timestamptz not null default now()
 );
+
+alter table public.exam_attempts
+  add column if not exists "accessTokenHash" text,
+  add column if not exists "updatedAt" timestamptz not null default now();
+
+create index if not exists exam_attempts_publication_started_idx
+  on public.exam_attempts ("publicationId", "startedAt" desc);
 
 create unique index if not exists exam_attempts_one_active_per_email
   on public.exam_attempts ("publicationId", lower(email))
@@ -151,6 +160,12 @@ create table if not exists public.exam_events (
   "createdAt" timestamptz not null default now()
 );
 
+create index if not exists exam_events_attempt_created_idx
+  on public.exam_events ("attemptId", "createdAt" desc);
+
+create index if not exists exam_events_publication_created_idx
+  on public.exam_events ("publicationId", "createdAt" desc);
+
 alter table public.categories enable row level security;
 alter table public.topics enable row level security;
 alter table public.questions enable row level security;
@@ -175,3 +190,15 @@ grant all privileges on table public.exam_publications to service_role;
 grant all privileges on table public.exam_attempts to service_role;
 grant all privileges on table public.exam_instances to service_role;
 grant all privileges on table public.exam_events to service_role;
+
+revoke all on table public.categories from anon, authenticated;
+revoke all on table public.topics from anon, authenticated;
+revoke all on table public.questions from anon, authenticated;
+revoke all on table public.answers from anon, authenticated;
+revoke all on table public.quizzes from anon, authenticated;
+revoke all on table public.quiz_questions from anon, authenticated;
+revoke all on table public.exports from anon, authenticated;
+revoke all on table public.exam_publications from anon, authenticated;
+revoke all on table public.exam_attempts from anon, authenticated;
+revoke all on table public.exam_instances from anon, authenticated;
+revoke all on table public.exam_events from anon, authenticated;

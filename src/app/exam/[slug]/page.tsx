@@ -13,27 +13,30 @@ import {
   XCircle,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
-import { useQuizApp } from "@/components/app-provider";
 import { ui } from "@/components/ui";
-import { examTopicId } from "@/lib/exam-randomization";
-import { calculateExamResult } from "@/lib/exam-scoring";
 import type {
-  ExamAttemptStatus,
   ExamEventType,
-  Question,
+  PublicExamAttempt,
+  PublicExamMetadata,
 } from "@/lib/quiz-types";
 import { questionTypeLabels } from "@/lib/quiz-types";
 import styles from "./page.module.css";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+type ExamApiResponse = {
+  exam?: PublicExamMetadata;
+  attempt?: PublicExamAttempt;
+  error?: string;
+};
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(Math.max(0, seconds) / 60);
@@ -41,204 +44,203 @@ function formatTime(seconds: number) {
   return `${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
 }
 
+async function readExamResponse(response: Response) {
+  const data = (await response.json()) as ExamApiResponse;
+  if (!response.ok) {
+    throw new Error(data.error ?? "Die Prüfung konnte nicht geladen werden.");
+  }
+  return data;
+}
+
 export default function PublicExamPage() {
   const params = useParams<{ slug: string }>();
-  const {
-    state,
-    ready,
-    startExamAttempt,
-    updateExamAttempt,
-    addExamEvent,
-  } = useQuizApp();
-  const publication = state.examPublications.find(
-    (item) => item.slug === params.slug,
-  );
-  const quiz = state.quizzes.find(
-    (item) => item.id === publication?.quizId,
-  );
-  const quizQuestions = useMemo(
-    () =>
-      quiz?.questionIds
-        .map((id) => state.questions.find((question) => question.id === id))
-        .filter((question): question is Question => Boolean(question)) ?? [],
-    [quiz, state.questions],
-  );
+  const [exam, setExam] = useState<PublicExamMetadata | null>(null);
+  const [attempt, setAttempt] = useState<PublicExamAttempt | null>(null);
+  const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [accepted, setAccepted] = useState(false);
-  const [attemptId, setAttemptId] = useState(() =>
-    typeof window === "undefined"
-      ? ""
-      : (window.sessionStorage.getItem(
-          `alphaquiz-attempt-${params.slug}`,
-        ) ?? ""),
-  );
   const [error, setError] = useState("");
   const [starting, setStarting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [warning, setWarning] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const finishingRef = useRef(false);
   const lastViolationRef = useRef(0);
-  const attempt = state.examAttempts.find((item) => item.id === attemptId);
-  const questions = attempt?.instance?.questions ?? quizQuestions;
-  const question = questions[attempt?.currentQuestion ?? 0];
+  const attemptRef = useRef<PublicExamAttempt | null>(null);
+
+  useEffect(() => {
+    attemptRef.current = attempt;
+  }, [attempt]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError("");
+      const storageKey = `alphaquiz-attempt-${params.slug}`;
+      const storedAttemptId = window.sessionStorage.getItem(storageKey);
+      try {
+        if (storedAttemptId) {
+          try {
+            const resumed = await readExamResponse(
+              await fetch(`/api/public/exam-attempts/${storedAttemptId}`, {
+                cache: "no-store",
+              }),
+            );
+            if (!cancelled) {
+              setExam(resumed.exam ?? null);
+              setAttempt(resumed.attempt ?? null);
+              return;
+            }
+          } catch {
+            window.sessionStorage.removeItem(storageKey);
+          }
+        }
+
+        const metadata = await readExamResponse(
+          await fetch(`/api/public/exams/${encodeURIComponent(params.slug)}`, {
+            cache: "no-store",
+          }),
+        );
+        if (!cancelled) setExam(metadata.exam ?? null);
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Die Prüfung konnte nicht geladen werden.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [params.slug]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentTime(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
 
-  const sendResultEmail = useCallback(
-    async (
-      currentAttemptId: string,
-      status: ExamAttemptStatus,
-      result: ReturnType<typeof calculateExamResult>,
-    ) => {
-      if (!publication?.sendResults || !quiz || !attempt) return;
-      try {
-        const response = await fetch("/api/exam-results/send", {
-          method: "POST",
+  const updateAttempt = useCallback(
+    async (patch: Record<string, unknown>) => {
+      const current = attemptRef.current;
+      if (!current) return null;
+      const data = await readExamResponse(
+        await fetch(`/api/public/exam-attempts/${current.id}`, {
+          method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            attemptId: currentAttemptId,
-            name: attempt.name,
-            email: attempt.email,
-            quizTitle: quiz.title,
-            status,
-            ...result,
-          }),
-        });
-        const data = (await response.json()) as {
-          sent?: boolean;
-          configured?: boolean;
-        };
-        updateExamAttempt(currentAttemptId, {
-          resultEmailStatus: data.sent
-            ? "sent"
-            : data.configured === false
-              ? "not-configured"
-              : "failed",
-        });
-      } catch {
-        updateExamAttempt(currentAttemptId, {
-          resultEmailStatus: "failed",
-        });
-      }
+          body: JSON.stringify(patch),
+        }),
+      );
+      if (data.exam) setExam(data.exam);
+      if (data.attempt) setAttempt(data.attempt);
+      return data.attempt ?? null;
     },
-    [attempt, publication?.sendResults, quiz, updateExamAttempt],
+    [],
   );
 
-  const finishExam = useCallback(
-    async (status: "submitted" | "terminated") => {
-      if (
-        finishingRef.current ||
-        !attempt ||
-        attempt.status !== "in-progress" ||
-        !publication ||
-        !quiz
-      ) {
-        return;
-      }
-      finishingRef.current = true;
-      const result = calculateExamResult(
-        attempt.instance?.quizSnapshot ?? quiz,
-        questions,
-        state.topics,
-        attempt.responses,
+  const finishExam = useCallback(async () => {
+    const current = attemptRef.current;
+    if (
+      finishingRef.current ||
+      !current ||
+      current.status !== "in-progress"
+    ) {
+      return;
+    }
+    finishingRef.current = true;
+    setSaving(true);
+    setError("");
+    try {
+      const data = await readExamResponse(
+        await fetch(`/api/public/exam-attempts/${current.id}`, {
+          method: "POST",
+        }),
       );
-      const submittedAt = new Date().toISOString();
-      updateExamAttempt(attempt.id, {
-        ...result,
-        status,
-        submittedAt,
-      });
-      addExamEvent({
-        publicationId: publication.id,
-        attemptId: attempt.id,
-        type: status,
-        message:
-          status === "terminated"
-            ? "Prüfung wegen Regelverstoss beendet"
-            : "Prüfung abgegeben",
-      });
+      if (data.exam) setExam(data.exam);
+      if (data.attempt) setAttempt(data.attempt);
       if (document.fullscreenElement) {
         await document.exitFullscreen().catch(() => undefined);
       }
-      await sendResultEmail(attempt.id, status, result);
+    } catch (finishError) {
+      setError(
+        finishError instanceof Error
+          ? finishError.message
+          : "Die Prüfung konnte nicht abgegeben werden.",
+      );
+    } finally {
+      setSaving(false);
       finishingRef.current = false;
-    },
-    [
-      addExamEvent,
-      attempt,
-      publication,
-      questions,
-      quiz,
-      sendResultEmail,
-      state.topics,
-      updateExamAttempt,
-    ],
-  );
+    }
+  }, []);
 
   useEffect(() => {
     if (
       !attempt ||
       attempt.status !== "in-progress" ||
-      !publication?.timeLimit
+      !exam?.timeLimit
     ) {
       return;
     }
+
     function updateTimer() {
       const elapsed = Math.floor(
         (Date.now() - new Date(attempt!.startedAt).getTime()) / 1000,
       );
-      const next = Math.max(0, publication!.timeLimit * 60 - elapsed);
+      const next = Math.max(0, exam!.timeLimit * 60 - elapsed);
       setRemaining(next);
-      if (next === 0) void finishExam("submitted");
+      if (next === 0) void finishExam();
     }
+
     updateTimer();
     const timer = window.setInterval(updateTimer, 1000);
     return () => window.clearInterval(timer);
-  }, [attempt, finishExam, publication]);
+  }, [attempt, exam, finishExam]);
 
   useEffect(() => {
     if (
       !attempt ||
       attempt.status !== "in-progress" ||
-      publication?.mode !== "closed"
+      exam?.mode !== "closed"
     ) {
       return;
     }
 
-    function recordViolation(type: ExamEventType, message: string) {
+    async function recordViolation(
+      type: Extract<ExamEventType, "tab-hidden" | "fullscreen-exit">,
+    ) {
       if (finishingRef.current) return;
       const now = Date.now();
       if (now - lastViolationRef.current < 900) return;
       lastViolationRef.current = now;
-      const nextCount = attempt!.violationCount + 1;
-      updateExamAttempt(attempt!.id, { violationCount: nextCount });
-      addExamEvent({
-        publicationId: publication!.id,
-        attemptId: attempt!.id,
-        type,
-        message,
-      });
-      if (nextCount >= publication!.maxViolations) {
-        void finishExam("terminated");
-      } else {
-        setWarning(true);
+      try {
+        const updated = await updateAttempt({ eventType: type });
+        if (updated?.status === "in-progress") setWarning(true);
+      } catch (violationError) {
+        setError(
+          violationError instanceof Error
+            ? violationError.message
+            : "Der Regelverstoss konnte nicht gespeichert werden.",
+        );
       }
     }
 
     function onVisibilityChange() {
-      if (document.hidden) {
-        recordViolation("tab-hidden", "Prüfungs-Tab verlassen");
-      }
+      if (document.hidden) void recordViolation("tab-hidden");
     }
 
     function onFullscreenChange() {
       if (!document.fullscreenElement && !document.hidden) {
-        recordViolation("fullscreen-exit", "Vollbild verlassen");
+        void recordViolation("fullscreen-exit");
       }
     }
 
@@ -248,17 +250,10 @@ export default function PublicExamPage() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
     };
-  }, [
-    addExamEvent,
-    attempt,
-    finishExam,
-    publication,
-    updateExamAttempt,
-  ]);
+  }, [attempt, exam?.mode, updateAttempt]);
 
   async function start() {
     setError("");
-    if (!publication || !quiz) return;
     const normalizedEmail = email.trim().toLowerCase();
     if (!name.trim() || !normalizedEmail) {
       setError("Bitte gib deinen Namen und deine E-Mail-Adresse ein.");
@@ -274,29 +269,56 @@ export default function PublicExamPage() {
       setError("Bitte bestätige zuerst die Prüfungsregeln.");
       return;
     }
+
     setStarting(true);
     try {
-      const result = await startExamAttempt(
-        publication.id,
-        name,
-        normalizedEmail,
+      const data = await readExamResponse(
+        await fetch(`/api/public/exams/${encodeURIComponent(params.slug)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email: normalizedEmail }),
+        }),
       );
-      if (!result.attemptId) {
-        setError(result.error ?? "Die Prüfung konnte nicht gestartet werden.");
-        return;
+      if (!data.attempt || !data.exam) {
+        throw new Error("Die Prüfung konnte nicht gestartet werden.");
       }
+      setExam(data.exam);
+      setAttempt(data.attempt);
       window.sessionStorage.setItem(
-        `alphaquiz-attempt-${publication.slug}`,
-        result.attemptId,
+        `alphaquiz-attempt-${params.slug}`,
+        data.attempt.id,
       );
-      setAttemptId(result.attemptId);
-      if (publication.mode === "closed" && !document.fullscreenElement) {
+      if (data.exam.mode === "closed" && !document.fullscreenElement) {
         await document.documentElement.requestFullscreen().catch(() => {
           setWarning(true);
         });
       }
+    } catch (startError) {
+      setError(
+        startError instanceof Error
+          ? startError.message
+          : "Die Prüfung konnte nicht gestartet werden.",
+      );
     } finally {
       setStarting(false);
+    }
+  }
+
+  async function saveResponse(questionId: string, response: string[]) {
+    const current = attemptRef.current;
+    if (!current) return;
+    setAttempt({
+      ...current,
+      responses: { ...current.responses, [questionId]: response },
+    });
+    try {
+      await updateAttempt({ questionId, response });
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Die Antwort konnte nicht gespeichert werden.",
+      );
     }
   }
 
@@ -312,15 +334,31 @@ export default function PublicExamPage() {
         ? selected.filter((id) => id !== answerId)
         : [...selected, answerId]
       : [answerId];
-    updateExamAttempt(attempt.id, {
-      responses: { ...attempt.responses, [question.id]: next },
-    });
+    void saveResponse(question.id, next);
+  }
+
+  async function moveTo(nextQuestion: number) {
+    if (!attempt) return;
+    const previous = attempt.currentQuestion;
+    setAttempt({ ...attempt, currentQuestion: nextQuestion });
+    try {
+      await updateAttempt({ currentQuestion: nextQuestion });
+    } catch (moveError) {
+      setAttempt((current) =>
+        current ? { ...current, currentQuestion: previous } : current,
+      );
+      setError(
+        moveError instanceof Error
+          ? moveError.message
+          : "Die Fragenposition konnte nicht gespeichert werden.",
+      );
+    }
   }
 
   async function continueAfterWarning() {
     setWarning(false);
     if (
-      publication?.mode === "closed" &&
+      exam?.mode === "closed" &&
       !document.fullscreenElement &&
       attempt?.status === "in-progress"
     ) {
@@ -330,31 +368,30 @@ export default function PublicExamPage() {
     }
   }
 
-  if (!ready) {
+  if (loading) {
     return <main className={styles.centerState}>Prüfung wird geladen …</main>;
   }
 
-  if (!publication || !quiz) {
+  if (!exam) {
     return (
       <main className={styles.centerState}>
         <XCircle aria-hidden="true" />
         <h1>Prüfung nicht gefunden</h1>
-        <p>Der verwendete Link ist ungültig oder wurde entfernt.</p>
+        <p>{error || "Der verwendete Link ist ungültig oder wurde entfernt."}</p>
       </main>
     );
   }
 
   const opensLater =
-    publication.availableFrom &&
-    currentTime < new Date(publication.availableFrom).getTime();
+    exam.availableFrom &&
+    currentTime < new Date(exam.availableFrom).getTime();
   const availabilityEnded =
-    publication.availableUntil &&
-    currentTime > new Date(publication.availableUntil).getTime();
-
-  if ((!publication.active || opensLater || availabilityEnded) && !attempt) {
+    exam.availableUntil &&
+    currentTime > new Date(exam.availableUntil).getTime();
+  if ((!exam.active || opensLater || availabilityEnded) && !attempt) {
     const message = opensLater
       ? `Diese Prüfung öffnet am ${new Date(
-          publication.availableFrom!,
+          exam.availableFrom!,
         ).toLocaleString("de-CH")}.`
       : availabilityEnded
         ? "Der Zeitraum für diese Prüfung ist abgelaufen."
@@ -368,6 +405,8 @@ export default function PublicExamPage() {
     );
   }
 
+  const questions = attempt?.questions ?? [];
+  const question = questions[attempt?.currentQuestion ?? 0];
   const resultFinished =
     attempt?.status === "submitted" || attempt?.status === "terminated";
 
@@ -383,18 +422,16 @@ export default function PublicExamPage() {
         </span>
         {attempt?.status === "in-progress" ? (
           <>
-            <strong className={styles.examTitle}>{quiz.title}</strong>
+            <strong className={styles.examTitle}>{exam.title}</strong>
             <span className={styles.examStatus}>
               <Clock3 aria-hidden="true" /> {formatTime(remaining)}
-              <span data-mode={publication.mode}>
-                {publication.mode === "closed" ? (
+              <span data-mode={exam.mode}>
+                {exam.mode === "closed" ? (
                   <ShieldCheck aria-hidden="true" />
                 ) : (
                   <BookOpen aria-hidden="true" />
                 )}
-                {publication.mode === "closed"
-                  ? "Prüfungsmodus"
-                  : "Open Book"}
+                {exam.mode === "closed" ? "Prüfungsmodus" : "Open Book"}
               </span>
             </span>
           </>
@@ -421,6 +458,7 @@ export default function PublicExamPage() {
               <span>Vor- und Nachname</span>
               <input
                 autoComplete="name"
+                maxLength={120}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Max Muster"
                 value={name}
@@ -430,6 +468,7 @@ export default function PublicExamPage() {
               <span>E-Mail-Adresse</span>
               <input
                 autoComplete="email"
+                maxLength={254}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="max.muster@beispiel.ch"
                 required
@@ -438,19 +477,19 @@ export default function PublicExamPage() {
               />
             </label>
             <div className={styles.examInfo}>
-              {publication.mode === "closed" ? (
+              {exam.mode === "closed" ? (
                 <ShieldCheck aria-hidden="true" />
               ) : (
                 <BookOpen aria-hidden="true" />
               )}
               <span>
-                <strong>{quiz.title}</strong>
+                <strong>{exam.title}</strong>
                 <small>
-                  {publication.timeLimit} Minuten · {questions.length} Fragen ·{" "}
-                  {quiz.passPercentage} % zum Bestehen
-                  {publication.availableUntil
+                  {exam.timeLimit} Minuten · {exam.questionCount} Fragen ·{" "}
+                  {exam.passPercentage} % zum Bestehen
+                  {exam.availableUntil
                     ? ` · offen bis ${new Date(
-                        publication.availableUntil,
+                        exam.availableUntil,
                       ).toLocaleString("de-CH")}`
                     : ""}
                 </small>
@@ -465,7 +504,7 @@ export default function PublicExamPage() {
               />
               <span>
                 Ich habe die Prüfungsregeln gelesen.{" "}
-                {publication.mode === "closed"
+                {exam.mode === "closed"
                   ? "Tabwechsel und das Verlassen des Vollbilds werden protokolliert."
                   : "Diese Prüfung ist als Open Book freigegeben."}
               </span>
@@ -480,8 +519,8 @@ export default function PublicExamPage() {
               {starting ? "Prüfung wird vorbereitet …" : "Prüfung starten"}
             </button>
             <small className={styles.privacy}>
-              <LockKeyhole aria-hidden="true" /> Deine Angaben werden sicher
-              verarbeitet.
+              <LockKeyhole aria-hidden="true" /> Deine Angaben werden nur für
+              diese Prüfung verarbeitet. <Link href="/privacy">Datenschutz</Link>
             </small>
           </section>
         ) : resultFinished ? (
@@ -514,33 +553,35 @@ export default function PublicExamPage() {
                 beendet.
               </div>
             ) : null}
-            <div className={styles.topicResults}>
-              {attempt.topicResults.map((topicResult) => (
-                <div key={topicResult.topicId}>
-                  <span>
-                    <strong>{topicResult.name}</strong>
-                    <small>
-                      {topicResult.score}/{topicResult.possible} Punkte ·
-                      mindestens {topicResult.required} %
-                    </small>
-                  </span>
-                  <span
-                    className={ui.pill}
-                    data-tone={topicResult.passed ? "ready" : "draft"}
-                  >
-                    {topicResult.percentage} % ·{" "}
-                    {topicResult.passed ? "Bestanden" : "Nicht bestanden"}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {publication.sendResults ? (
+            {attempt.topicResults.length ? (
+              <div className={styles.topicResults}>
+                {attempt.topicResults.map((topicResult) => (
+                  <div key={topicResult.topicId}>
+                    <span>
+                      <strong>{topicResult.name}</strong>
+                      <small>
+                        {topicResult.score}/{topicResult.possible} Punkte ·
+                        mindestens {topicResult.required} %
+                      </small>
+                    </span>
+                    <span
+                      className={ui.pill}
+                      data-tone={topicResult.passed ? "ready" : "draft"}
+                    >
+                      {topicResult.percentage} % ·{" "}
+                      {topicResult.passed ? "Bestanden" : "Nicht bestanden"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {exam.sendResults ? (
               <p className={styles.mailStatus}>
                 <Mail aria-hidden="true" />
                 {attempt.resultEmailStatus === "sent"
                   ? "Das Ergebnis wurde per E-Mail versendet."
                   : attempt.resultEmailStatus === "not-configured"
-                    ? "Resend ist lokal noch nicht konfiguriert. Das Ergebnis wurde gespeichert."
+                    ? "Der E-Mail-Versand ist noch nicht konfiguriert. Das Ergebnis wurde gespeichert."
                     : attempt.resultEmailStatus === "failed"
                       ? "Das Ergebnis wurde gespeichert, die E-Mail konnte aber nicht versendet werden."
                       : "Die Ergebnis-E-Mail wird vorbereitet …"}
@@ -551,16 +592,13 @@ export default function PublicExamPage() {
           <section className={styles.player}>
             <div className={styles.progressHead}>
               <span>
-                Frage {(attempt?.currentQuestion ?? 0) + 1} von{" "}
-                {questions.length}
+                Frage {attempt.currentQuestion + 1} von {questions.length}
               </span>
               <div>
                 <span
                   style={{
                     width: `${
-                      (((attempt?.currentQuestion ?? 0) + 1) /
-                        questions.length) *
-                      100
+                      ((attempt.currentQuestion + 1) / questions.length) * 100
                     }%`,
                   }}
                 />
@@ -568,19 +606,8 @@ export default function PublicExamPage() {
             </div>
             <div className={styles.questionBody}>
               <p className={styles.eyebrow}>
-                {attempt.instance?.topicLabelById[
-                  examTopicId(
-                    question,
-                    attempt.instance.quizSnapshot,
-                    attempt.instance.configSnapshot.useTopics,
-                  )
-                ] ??
-                  state.topics.find(
-                    (topic) => topic.id === question.topicId,
-                  )?.name ??
-                  "Ohne Unterkategorie"}{" "}
-                · {questionTypeLabels[question.type]} · {question.points}{" "}
-                {question.points === 1 ? "Punkt" : "Punkte"}
+                {question.topicLabel} · {questionTypeLabels[question.type]} ·{" "}
+                {question.points} {question.points === 1 ? "Punkt" : "Punkte"}
               </p>
               <h1>{question.title}</h1>
               {question.image ? (
@@ -606,14 +633,21 @@ export default function PublicExamPage() {
               </p>
               {question.type === "text" ? (
                 <textarea
-                  onChange={(event) =>
-                    updateExamAttempt(attempt.id, {
+                  maxLength={10_000}
+                  onBlur={(event) =>
+                    void saveResponse(question.id, [event.target.value])
+                  }
+                  onChange={(event) => {
+                    const current = attemptRef.current;
+                    if (!current) return;
+                    setAttempt({
+                      ...current,
                       responses: {
-                        ...attempt.responses,
+                        ...current.responses,
                         [question.id]: [event.target.value],
                       },
-                    })
-                  }
+                    });
+                  }}
                   placeholder="Antwort eingeben …"
                   value={attempt.responses[question.id]?.[0] ?? ""}
                 />
@@ -638,13 +672,12 @@ export default function PublicExamPage() {
                   })}
                 </div>
               )}
+              {error ? <p className={styles.error}>{error}</p> : null}
               <div className={styles.actions}>
                 <button
-                  disabled={attempt.currentQuestion === 0}
+                  disabled={attempt.currentQuestion === 0 || saving}
                   onClick={() =>
-                    updateExamAttempt(attempt.id, {
-                      currentQuestion: attempt.currentQuestion - 1,
-                    })
+                    void moveTo(attempt.currentQuestion - 1)
                   }
                   type="button"
                 >
@@ -652,19 +685,20 @@ export default function PublicExamPage() {
                 </button>
                 <button
                   className={styles.primaryAction}
+                  disabled={saving}
                   onClick={() => {
                     if (attempt.currentQuestion === questions.length - 1) {
-                      void finishExam("submitted");
+                      void finishExam();
                     } else {
-                      updateExamAttempt(attempt.id, {
-                        currentQuestion: attempt.currentQuestion + 1,
-                      });
+                      void moveTo(attempt.currentQuestion + 1);
                     }
                   }}
                   type="button"
                 >
                   {attempt.currentQuestion === questions.length - 1
-                    ? "Prüfung abgeben"
+                    ? saving
+                      ? "Wird abgegeben …"
+                      : "Prüfung abgeben"
                     : "Weiter"}
                   <ArrowRight aria-hidden="true" />
                 </button>
@@ -693,12 +727,11 @@ export default function PublicExamPage() {
             </span>
             <h2 id="violation-title">Tabwechsel erkannt</h2>
             <p>
-              Du hast den Prüfungs-Tab oder das Vollbild verlassen. Der Verstoss
+              Du hast den Prüfungstab oder das Vollbild verlassen. Der Verstoss
               wurde gespeichert und dem Administrator gemeldet.
             </p>
             <strong>
-              Verstoss {attempt.violationCount} von{" "}
-              {publication.maxViolations}
+              Verstoss {attempt.violationCount} von {exam.maxViolations}
             </strong>
             <button onClick={() => void continueAfterWarning()} type="button">
               Prüfung fortsetzen

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 type LoginBody = {
   email?: string;
@@ -7,6 +8,17 @@ type LoginBody = {
 };
 
 export async function POST(request: Request) {
+  const rateLimit = checkRateLimit(request, "admin-login", 10, 15 * 60_000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Zu viele Anmeldeversuche. Bitte warte einen Moment." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfter) },
+      },
+    );
+  }
+
   let body: LoginBody;
   try {
     body = (await request.json()) as LoginBody;
@@ -43,6 +55,20 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "E-Mail-Adresse oder Passwort ist falsch." },
       { status: 401 },
+    );
+  }
+
+  const configuredAdminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  if (
+    (process.env.NODE_ENV === "production" && !configuredAdminEmail) ||
+    (configuredAdminEmail && data.user.email?.toLowerCase() !== configuredAdminEmail)
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Dieses Konto ist nicht als AlphaQuiz-Administrator freigeschaltet.",
+      },
+      { status: 403 },
     );
   }
 

@@ -55,14 +55,6 @@ export default function ExamResultsPage() {
     if (attempt.status !== "submitted" && attempt.status !== "terminated") {
       return false;
     }
-    const publication = state.examPublications.find(
-      (item) => item.id === attempt.publicationId,
-    );
-    const quiz = state.quizzes.find(
-      (item) => item.id === publication?.quizId,
-    );
-    if (!quiz) return false;
-
     if (!quiet) setSendingAttemptId(attempt.id);
     try {
       const response = await fetch("/api/exam-results/send", {
@@ -71,15 +63,6 @@ export default function ExamResultsPage() {
         body: JSON.stringify({
           attemptId: attempt.id,
           deliveryId: crypto.randomUUID(),
-          name: attempt.name,
-          email: attempt.email,
-          quizTitle: quiz.title,
-          status: attempt.status,
-          score: attempt.score,
-          possible: attempt.possible,
-          percentage: attempt.percentage,
-          passed: attempt.passed,
-          topicResults: attempt.topicResults,
         }),
       });
       const data = (await response.json()) as {

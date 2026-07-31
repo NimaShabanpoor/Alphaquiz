@@ -166,6 +166,53 @@ export type ExamEvent = {
   createdAt: string;
 };
 
+export type PublicExamMetadata = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  mode: ExamMode;
+  timeLimit: number;
+  maxViolations: number;
+  sendResults: boolean;
+  active: boolean;
+  availableFrom?: string;
+  availableUntil?: string;
+  passPercentage: number;
+  questionCount: number;
+};
+
+export type PublicExamQuestion = {
+  id: string;
+  title: string;
+  description: string;
+  image?: QuestionImage;
+  type: QuestionType;
+  points: number;
+  topicLabel: string;
+  answers: Array<Pick<Answer, "id" | "text">>;
+};
+
+export type PublicExamAttempt = {
+  id: string;
+  publicationId: string;
+  name: string;
+  email: string;
+  status: ExamAttemptStatus;
+  startedAt: string;
+  submittedAt?: string;
+  currentQuestion: number;
+  responses: Record<string, string[]>;
+  score: number;
+  possible: number;
+  percentage: number;
+  passed: boolean;
+  topicResults: ExamTopicResult[];
+  violationCount: number;
+  resultEmailStatus: ExamAttempt["resultEmailStatus"];
+  questions: PublicExamQuestion[];
+};
+
 export type ExportRecord = {
   id: string;
   quizId: string;

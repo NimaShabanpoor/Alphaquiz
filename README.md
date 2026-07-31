@@ -22,8 +22,8 @@ eigene CSS-Moduldatei.
 - echte DOCX- und PDF-Dateien inklusive Fragebildern für den
   Microsoft-Forms-Schnellimport
 - CSV-Prüfliste und JSON-Sicherung
-- automatische lokale Speicherung im Browser
-- optionale Supabase-Synchronisierung über das Next.js-Backend
+- lokale Speicherung der Quiz-Inhalte ohne Teilnehmerdaten
+- serverseitige Supabase-Speicherung für Prüfungsversuche und Resultate
 
 ## Lokal starten
 
@@ -32,7 +32,8 @@ npm install
 npm run dev
 ```
 
-Danach `http://localhost:3000` öffnen. Prüfungslinks werden unter
+Danach `http://localhost:3000` öffnen und mit dem in Supabase Auth angelegten
+Admin-Konto anmelden. Prüfungslinks werden unter
 `http://localhost:3000/exams` erstellt, laufende Versuche erscheinen unter
 `http://localhost:3000/exam-activity`.
 
@@ -53,7 +54,7 @@ an den Browser ausgeliefert.
 
 Für den optionalen Versand über Resend in `.env` zusätzlich
 `RESEND_API_KEY` und `RESEND_FROM_EMAIL` setzen. Ohne diese Angaben werden
-Prüfungsergebnisse weiterhin lokal und in Supabase gespeichert; die App zeigt
+Prüfungsergebnisse weiterhin in Supabase gespeichert; die App zeigt
 dann an, dass keine E-Mail versendet wurde.
 
 Microsoft Forms kann eingebettete Abbildungen beim Schnellimport auslassen.
@@ -69,3 +70,9 @@ npm run build
 
 Die analysierte Struktur der ursprünglichen Access-Datei steht in
 `docs/access-mapping.md`.
+
+## Sicherheit und Hosting
+
+Die Produktionskonfiguration, das Einzeladmin-Modell, die Supabase-Migration
+und Hinweise für Vercel beziehungsweise Hostpoint sind in
+`docs/security-and-hosting.md` dokumentiert.

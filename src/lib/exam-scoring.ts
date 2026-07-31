@@ -1,10 +1,15 @@
 import type {
+  ExamInstance,
   ExamTopicResult,
   Question,
   Quiz,
   Topic,
 } from "@/lib/quiz-types";
-import { QUIZ_UNASSIGNED_TOPIC_ID } from "@/lib/quiz-types";
+import {
+  QUIZ_ALL_QUESTIONS_TOPIC_ID,
+  QUIZ_UNASSIGNED_TOPIC_ID,
+} from "@/lib/quiz-types";
+import { examTopicId } from "@/lib/exam-randomization";
 
 export function calculateQuestionScore(
   question: Question,
@@ -87,6 +92,72 @@ export function calculateExamResult(
       ? topicResults.length > 0 &&
         topicResults.every((topicResult) => topicResult.passed)
       : percentage >= quiz.passPercentage;
+
+  return { score, possible, percentage, topicResults, passed };
+}
+
+export function calculateExamInstanceResult(
+  instance: ExamInstance,
+  responses: Record<string, string[]>,
+) {
+  const quiz = instance.quizSnapshot;
+  const scoredQuestions = instance.questions.map((question) => ({
+    question,
+    score: calculateQuestionScore(question, responses),
+    topicId: examTopicId(
+      question,
+      quiz,
+      instance.configSnapshot.useTopics,
+    ),
+  }));
+  const score = scoredQuestions.reduce((total, item) => total + item.score, 0);
+  const possible = instance.questions.reduce(
+    (total, question) => total + question.points,
+    0,
+  );
+  const percentage = possible ? Math.round((score / possible) * 100) : 0;
+
+  const topicResults: ExamTopicResult[] = Array.from(
+    new Set(scoredQuestions.map((item) => item.topicId)),
+  ).map((topicId) => {
+    const topicQuestions = scoredQuestions.filter(
+      (item) => item.topicId === topicId,
+    );
+    const topicScore = topicQuestions.reduce(
+      (total, item) => total + item.score,
+      0,
+    );
+    const topicPossible = topicQuestions.reduce(
+      (total, item) => total + item.question.points,
+      0,
+    );
+    const required =
+      quiz.topicPassPercentages[topicId] ?? quiz.passPercentage;
+    const topicPercentage = topicPossible
+      ? Math.round((topicScore / topicPossible) * 100)
+      : 0;
+
+    return {
+      topicId,
+      name:
+        instance.topicLabelById[topicId] ??
+        (topicId === QUIZ_ALL_QUESTIONS_TOPIC_ID
+          ? "Alle Fragen"
+          : "Ohne Unterkategorie"),
+      score: topicScore,
+      possible: topicPossible,
+      percentage: topicPercentage,
+      required,
+      passed: topicPercentage >= required,
+    };
+  });
+
+  const passed =
+    possible > 0 &&
+    (quiz.scoringMode === "per-topic"
+      ? topicResults.length > 0 &&
+        topicResults.every((topicResult) => topicResult.passed)
+      : percentage >= quiz.passPercentage);
 
   return { score, possible, percentage, topicResults, passed };
 }

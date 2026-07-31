@@ -32,7 +32,11 @@ export default function SettingsPage() {
       const response = await fetch("/api/supabase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(state),
+        body: JSON.stringify({
+          ...state,
+          examAttempts: [],
+          examEvents: [],
+        }),
       });
       const data = (await response.json()) as {
         error?: string;

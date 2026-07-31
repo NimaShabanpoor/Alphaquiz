@@ -61,6 +61,7 @@ try {
         'exam_publications',
         'exam_attempts',
         'exam_events',
+        'exam_instances',
         'questions',
         'answers',
         'quizzes',

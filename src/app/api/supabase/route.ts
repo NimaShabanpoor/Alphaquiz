@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { QuizState } from "@/lib/quiz-types";
+import { loadAdminState, loadExamActivity } from "@/lib/admin-state";
+import { requireAdmin } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -17,7 +19,10 @@ async function upsert(
   if (error) throw new Error(`${table}: ${error.message}`);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireAdmin(request);
+  if (auth.response) return auth.response;
+
   const current = getSupabaseAdmin();
   if (!current.client) {
     return Response.json({
@@ -28,6 +33,14 @@ export async function GET() {
   }
 
   try {
+    const searchParams = new URL(request.url).searchParams;
+    if (searchParams.get("state") === "1") {
+      return Response.json({ state: await loadAdminState(current.client) });
+    }
+    if (searchParams.get("activity") === "1") {
+      return Response.json(await loadExamActivity(current.client));
+    }
+
     const { error } = await current.client
       .from("categories")
       .select("id")
@@ -50,6 +63,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAdmin(request);
+  if (auth.response) return auth.response;
+
   const current = getSupabaseAdmin();
   if (!current.client) {
     return Response.json(
@@ -130,42 +146,6 @@ export async function POST(request: Request) {
         availableUntil: publication.availableUntil || null,
       })),
     );
-    await upsert(
-      current.client,
-      "exam_attempts",
-      state.examAttempts.map((attempt) => {
-        const row = { ...attempt };
-        delete row.instance;
-        return row;
-      }),
-    );
-    await upsert(
-      current.client,
-      "exam_instances",
-      state.examAttempts.flatMap((attempt) =>
-        attempt.instance
-          ? [
-              {
-                id: attempt.instance.id,
-                attemptId: attempt.instance.attemptId,
-                publicationId: attempt.instance.publicationId,
-                quizId: attempt.instance.quizId,
-                studentKey: attempt.instance.studentKey,
-                questionOrder: attempt.instance.questionOrder,
-                topicOrder: attempt.instance.topicOrder,
-                answerOrderByQuestionId:
-                  attempt.instance.answerOrderByQuestionId,
-                snapshot: attempt.instance,
-                seed: attempt.instance.seed,
-                generatedAt: attempt.instance.generatedAt,
-                previousAttemptId:
-                  attempt.instance.previousAttemptId ?? null,
-              },
-            ]
-          : [],
-      ),
-    );
-    await upsert(current.client, "exam_events", state.examEvents);
     return Response.json({ synced: true, syncedAt: new Date().toISOString() });
   } catch (error) {
     return Response.json(
@@ -181,6 +161,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const auth = await requireAdmin(request);
+  if (auth.response) return auth.response;
+
   const publicationId = new URL(request.url).searchParams.get(
     "publicationId",
   );

@@ -109,7 +109,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }
 
-  if (pathname === "/login" || pathname.startsWith("/exam/")) {
+  if (
+    pathname === "/login" ||
+    pathname === "/privacy" ||
+    pathname.startsWith("/exam/")
+  ) {
     return <>{children}</>;
   }
 
@@ -157,9 +161,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className={styles.profile}>
-          <span className={styles.avatar}>L</span>
+          <span className={styles.avatar}>W</span>
           <span className={styles.profileCopy}>
-            <strong>Luca</strong>
+            <strong>Werner Hutter</strong>
             <small>Administrator</small>
           </span>
           <button

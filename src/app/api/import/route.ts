@@ -1,6 +1,7 @@
 import MDBReader from "mdb-reader";
 import type { Value } from "mdb-reader";
 import type { Category, Question, QuestionType } from "@/lib/quiz-types";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
@@ -255,6 +256,9 @@ function parseJson(source: string) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAdmin(request);
+  if (auth.response) return auth.response;
+
   try {
     const data = await request.formData();
     const file = data.get("file");

@@ -10,6 +10,7 @@ import {
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { Question, Quiz } from "@/lib/quiz-types";
 import { questionTypeLabels } from "@/lib/quiz-types";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
@@ -252,6 +253,9 @@ function createCsv(quiz: Quiz, questions: Question[]) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAdmin(request);
+  if (auth.response) return auth.response;
+
   try {
     const payload = (await request.json()) as ExportPayload;
     const { quiz, questions, format } = payload;

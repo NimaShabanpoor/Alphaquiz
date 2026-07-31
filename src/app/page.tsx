@@ -56,7 +56,7 @@ export default function DashboardPage() {
         }
         eyebrow="Übersicht"
         lead="Deine Quizzes, Fragen und Exporte auf einen Blick."
-        title="Guten Tag."
+        title="Guten Tag Werner Hutter."
       />
 
       <section aria-label="Kennzahlen" className={styles.stats}>
