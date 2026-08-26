@@ -1,45 +1,32 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
-
-export const ADMIN_ACCESS_COOKIE = "alphaquiz-access-token";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type AdminUser = {
   id: string;
   email: string;
 };
 
-function readCookie(request: Request, name: string) {
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  for (const entry of cookieHeader.split(";")) {
-    const [key, ...valueParts] = entry.trim().split("=");
-    if (key === name) return decodeURIComponent(valueParts.join("="));
+export function isAllowedAdminEmail(email: string) {
+  const configuredAdminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  if (process.env.NODE_ENV === "production" && !configuredAdminEmail) {
+    return false;
   }
-  return "";
+  return !configuredAdminEmail || email === configuredAdminEmail;
 }
 
-export async function getAdminUser(request: Request): Promise<AdminUser | null> {
-  const token = readCookie(request, ADMIN_ACCESS_COOKIE);
-  if (!token) return null;
+export async function getAdminUser(): Promise<AdminUser | null> {
+  let supabase;
+  try {
+    supabase = await createSupabaseServerClient();
+  } catch {
+    return null;
+  }
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase.client) return null;
-
-  const { data, error } = await supabase.client.auth.getUser(token);
+  const { data, error } = await supabase.auth.getUser();
   const email = data.user?.email?.trim().toLowerCase();
   if (error || !data.user || !email) return null;
-
-  const configuredAdminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (
-    configuredAdminEmail &&
-    email !== configuredAdminEmail
-  ) {
-    return null;
-  }
-
-  if (process.env.NODE_ENV === "production" && !configuredAdminEmail) {
-    return null;
-  }
+  if (!isAllowedAdminEmail(email)) return null;
 
   return { id: data.user.id, email };
 }
@@ -58,7 +45,7 @@ export async function requireAdmin(request: Request) {
     }
   }
 
-  const user = await getAdminUser(request);
+  const user = await getAdminUser();
   if (!user) {
     return {
       user: null,

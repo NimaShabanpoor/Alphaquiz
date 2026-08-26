@@ -40,15 +40,16 @@ Admin-Konto anmelden. Prüfungslinks werden unter
 ## Supabase einrichten
 
 1. `.env.example` als `.env` kopieren.
-2. PostgreSQL-Verbindungsadresse, Secret-Key und IPv4-Pooler-Host aus
-   Supabase eintragen.
+2. Öffentliche Projekt-URL und Publishable Key sowie die serverseitige
+   PostgreSQL-Verbindungsadresse, den Service-Role-Key und optional den
+   IPv4-Pooler-Host aus Supabase eintragen.
 3. `npm run db:setup` ausführen. Das idempotente Skript richtet
    `supabase/schema.sql` ein und prüft alle Tabellen.
 4. Den Entwicklungsserver neu starten und unter **Einstellungen** die
    Verbindung prüfen.
 
-Der Service-Role-Key wird nur in Next.js-Route-Handlern verwendet und niemals
-an den Browser ausgeliefert.
+Browser- und Benutzersitzungen verwenden den Publishable Key und
+`@supabase/ssr`. Der Service-Role-Key wird niemals an den Browser ausgeliefert.
 
 ## Ergebnis-E-Mails
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ResetBody = {
   email?: string;
@@ -45,15 +45,17 @@ export async function POST(request: Request) {
     });
   }
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase.client) {
+  let supabase;
+  try {
+    supabase = await createSupabaseServerClient();
+  } catch {
     return NextResponse.json(
-      { error: supabase.error || "Supabase ist nicht konfiguriert." },
+      { error: "Supabase ist nicht konfiguriert." },
       { status: 503 },
     );
   }
 
-  const { error } = await supabase.client.auth.resetPasswordForEmail(email, {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${new URL(request.url).origin}/login`,
   });
 

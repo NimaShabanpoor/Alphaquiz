@@ -21,11 +21,17 @@ ausgewertet.
    Supabase CLI (`supabase link`, danach `supabase db push`) anwenden. Keine
    Änderungen direkt im SQL Editor oder Table Editor vornehmen.
 3. In Supabase Auth genau das Admin-Konto anlegen.
-4. `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` und `ADMIN_EMAIL` setzen.
+4. `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` und `ADMIN_EMAIL` setzen.
 5. Optional `RESEND_API_KEY` und `RESEND_FROM_EMAIL` setzen.
 
 Der Service-Role-Key darf niemals mit `NEXT_PUBLIC_` beginnen und gehört nur
 in die Server-Umgebung.
+
+Admin-Sitzungen werden durch `@supabase/ssr` in Supabase-eigenen Cookies
+verwaltet und automatisch erneuert. `src/proxy.ts` führt ausschliesslich einen
+optimistischen UX-Redirect aus. Autorisierung erfolgt in jedem geschützten
+Route Handler erneut über `auth.getUser()` und `requireAdmin()`.
 
 ## Vercel
 

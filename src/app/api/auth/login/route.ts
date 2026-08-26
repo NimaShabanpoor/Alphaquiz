@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { isAllowedAdminEmail } from "@/lib/admin-auth";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type LoginBody = {
   email?: string;
@@ -38,31 +39,40 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase.client) {
+  let supabase;
+  try {
+    supabase = await createSupabaseServerClient();
+  } catch {
     return NextResponse.json(
-      { error: supabase.error || "Supabase ist nicht konfiguriert." },
+      { error: "Supabase ist nicht konfiguriert." },
       { status: 503 },
     );
   }
 
-  const { data, error } = await supabase.client.auth.signInWithPassword({
+  const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  if (error || !data.session) {
+  if (error) {
     return NextResponse.json(
       { error: "E-Mail-Adresse oder Passwort ist falsch." },
       { status: 401 },
     );
   }
 
-  const configuredAdminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (
-    (process.env.NODE_ENV === "production" && !configuredAdminEmail) ||
-    (configuredAdminEmail && data.user.email?.toLowerCase() !== configuredAdminEmail)
-  ) {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const verifiedEmail = userData.user?.email?.trim().toLowerCase();
+  if (userError || !userData.user || !verifiedEmail) {
+    await supabase.auth.signOut();
+    return NextResponse.json(
+      { error: "Die Anmeldung konnte nicht verifiziert werden." },
+      { status: 401 },
+    );
+  }
+
+  if (!isAllowedAdminEmail(verifiedEmail)) {
+    await supabase.auth.signOut();
     return NextResponse.json(
       {
         error:
@@ -74,24 +84,11 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({
     user: {
-      id: data.user.id,
-      email: data.user.email,
+      id: userData.user.id,
+      email: verifiedEmail,
     },
-  });
-  const secure = process.env.NODE_ENV === "production";
-  response.cookies.set("alphaquiz-access-token", data.session.access_token, {
-    httpOnly: true,
-    maxAge: data.session.expires_in,
-    path: "/",
-    sameSite: "lax",
-    secure,
-  });
-  response.cookies.set("alphaquiz-refresh-token", data.session.refresh_token, {
-    httpOnly: true,
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
-    sameSite: "lax",
-    secure,
+  }, {
+    headers: { "Cache-Control": "private, no-store" },
   });
 
   return response;
