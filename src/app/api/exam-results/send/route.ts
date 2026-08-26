@@ -1,39 +1,39 @@
 import { requireAdmin } from "@/lib/admin-auth";
 import { sendAttemptResultEmail } from "@/lib/result-email";
+import { z } from "zod";
 
 export const runtime = "nodejs";
 
-type SendBody = {
-  attemptId?: string;
-  deliveryId?: string;
-};
+const sendBodySchema = z
+  .object({
+    attemptId: z.string().trim().min(1).max(200),
+    deliveryId: z.string().trim().min(1).max(200).optional(),
+  })
+  .strict();
 
 export async function POST(request: Request) {
+  const payload = await request.json().catch(() => null);
+  const parsed = sendBodySchema.safeParse(payload);
+  if (!parsed.success) {
+    return Response.json(
+      { error: "Die Angaben für den E-Mail-Versand sind ungültig." },
+      { status: 400 },
+    );
+  }
   const auth = await requireAdmin(request);
   if (auth.response) return auth.response;
 
   try {
-    const body = (await request.json()) as SendBody;
-    if (!body.attemptId) {
-      return Response.json(
-        { error: "Die Versuchs-ID fehlt." },
-        { status: 400 },
-      );
-    }
     const result = await sendAttemptResultEmail(
       auth.client,
-      body.attemptId,
-      body.deliveryId,
+      parsed.data.attemptId,
+      parsed.data.deliveryId,
     );
     return Response.json(result);
   } catch (error) {
+    console.error("[AlphaQuiz API] Ergebnis-E-Mail senden", error);
     return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Die Ergebnis-E-Mail konnte nicht versendet werden.",
-      },
+      { error: "Die Ergebnis-E-Mail konnte nicht versendet werden." },
       { status: 502 },
     );
   }

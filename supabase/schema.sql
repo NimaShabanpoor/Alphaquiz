@@ -72,6 +72,100 @@ create table if not exists public.exports (
   "createdAt" timestamptz not null default now()
 );
 
+-- CREATE TABLE IF NOT EXISTS does not add columns to legacy installations.
+-- Upgrade ownership before creating indexes or enabling the RLS policies below.
+alter table public.categories add column if not exists user_id uuid;
+alter table public.questions add column if not exists user_id uuid;
+alter table public.quizzes add column if not exists user_id uuid;
+alter table public.exports add column if not exists user_id uuid;
+
+do $$
+declare
+  auth_user_count bigint;
+  legacy_owner_id uuid;
+begin
+  if exists (
+    select 1 from public.categories where user_id is null
+    union all
+    select 1 from public.questions where user_id is null
+    union all
+    select 1 from public.quizzes where user_id is null
+    union all
+    select 1 from public.exports where user_id is null
+  ) then
+    select count(*) into auth_user_count from auth.users;
+
+    if auth_user_count <> 1 then
+      raise exception using
+        message = format(
+          'AlphaQuiz ownership migration requires exactly one Auth user for legacy data; found %s.',
+          auth_user_count
+        ),
+        hint = 'Assign user_id explicitly to legacy rows before applying this schema.';
+    end if;
+
+    select id into legacy_owner_id
+    from auth.users
+    order by created_at, id
+    limit 1;
+
+    update public.categories set user_id = legacy_owner_id where user_id is null;
+    update public.questions set user_id = legacy_owner_id where user_id is null;
+    update public.quizzes set user_id = legacy_owner_id where user_id is null;
+    update public.exports set user_id = legacy_owner_id where user_id is null;
+  end if;
+end
+$$;
+
+alter table public.categories alter column user_id set not null;
+alter table public.questions alter column user_id set not null;
+alter table public.quizzes alter column user_id set not null;
+alter table public.exports alter column user_id set not null;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'categories_user_id_fkey'
+      and conrelid = 'public.categories'::regclass
+  ) then
+    alter table public.categories
+      add constraint categories_user_id_fkey
+      foreign key (user_id) references auth.users(id);
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'questions_user_id_fkey'
+      and conrelid = 'public.questions'::regclass
+  ) then
+    alter table public.questions
+      add constraint questions_user_id_fkey
+      foreign key (user_id) references auth.users(id);
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'quizzes_user_id_fkey'
+      and conrelid = 'public.quizzes'::regclass
+  ) then
+    alter table public.quizzes
+      add constraint quizzes_user_id_fkey
+      foreign key (user_id) references auth.users(id);
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'exports_user_id_fkey'
+      and conrelid = 'public.exports'::regclass
+  ) then
+    alter table public.exports
+      add constraint exports_user_id_fkey
+      foreign key (user_id) references auth.users(id);
+  end if;
+end
+$$;
+
 create index if not exists categories_user_id_idx on public.categories (user_id);
 create index if not exists questions_user_id_idx on public.questions (user_id);
 create index if not exists quizzes_user_id_idx on public.quizzes (user_id);

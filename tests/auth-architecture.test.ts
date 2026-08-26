@@ -8,11 +8,20 @@ const readProjectFile = (path: string) =>
   readFileSync(resolve(projectRoot, path), "utf8");
 
 const protectedRouteHandlers = [
+  "src/app/api/admin/activity/route.ts",
+  "src/app/api/admin/categories/route.ts",
+  "src/app/api/admin/exam-publications/route.ts",
+  "src/app/api/admin/exam-publications/[publicationId]/route.ts",
   "src/app/api/admin/exam-attempts/[attemptId]/reset/route.ts",
+  "src/app/api/admin/exports/route.ts",
+  "src/app/api/admin/questions/route.ts",
+  "src/app/api/admin/quizzes/route.ts",
+  "src/app/api/admin/state/route.ts",
+  "src/app/api/admin/status/route.ts",
+  "src/app/api/admin/topics/route.ts",
   "src/app/api/exam-results/send/route.ts",
   "src/app/api/export/route.ts",
   "src/app/api/import/route.ts",
-  "src/app/api/supabase/route.ts",
 ] as const;
 
 test("Supabase SSR verwendet getrennte Browser- und Server-Clients", () => {
@@ -52,8 +61,8 @@ test("geschützte Route Handler prüfen die Session selbst mit getUser", () => {
   for (const route of protectedRouteHandlers) {
     assert.match(
       readProjectFile(route),
-      /requireAdmin\(request\)/,
-      `${route} muss requireAdmin(request) aufrufen`,
+      /requireAdmin\(request\)|authorizeAdminMutation\(request\)/,
+      `${route} muss die Admin-Sitzung selbst prüfen`,
     );
   }
 });

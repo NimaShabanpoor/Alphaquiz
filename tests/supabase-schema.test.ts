@@ -74,6 +74,27 @@ test("direkt verwaltete Tabellen haben eine verpflichtende Auth-Ownership", () =
   }
 });
 
+test("Legacy-Ownership wird vor den user_id-Indexen nachgerüstet", () => {
+  for (const table of directlyOwnedTables) {
+    const addColumnPosition = schema.indexOf(
+      `alter table public.${table} add column if not exists user_id uuid`,
+    );
+    const indexPosition = schema.indexOf(
+      `create index if not exists ${table}_user_id_idx`,
+    );
+
+    assert.notEqual(addColumnPosition, -1, `Legacy-Upgrade für ${table} fehlt`);
+    assert.notEqual(indexPosition, -1, `user_id-Index für ${table} fehlt`);
+    assert.ok(
+      addColumnPosition < indexPosition,
+      `${table}.user_id muss vor dem Index angelegt werden`,
+    );
+  }
+
+  assert.match(schema, /AlphaQuiz ownership migration requires exactly one Auth user/);
+  assert.match(schema, /update public\.categories set user_id = legacy_owner_id/);
+});
+
 test("jede öffentliche AlphaQuiz-Tabelle aktiviert RLS und erhält CRUD-Policies", () => {
   for (const table of publicTables) {
     for (const sql of [schema, migration]) {

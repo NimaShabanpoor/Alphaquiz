@@ -352,7 +352,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteExamPublication = useCallback((id: string) => {
     setState((current) => deleteExamPublicationFromState(current, id));
     void fetch(
-      `/api/supabase?publicationId=${encodeURIComponent(id)}`,
+      `/api/admin/exam-publications/${encodeURIComponent(id)}`,
       { method: "DELETE" },
     ).then(async (response) => {
       if (response.ok) return;

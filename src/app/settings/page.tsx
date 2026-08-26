@@ -13,7 +13,7 @@ type Status = {
 };
 
 async function loadSupabaseStatus() {
-  const response = await fetch("/api/supabase", { cache: "no-store" });
+  const response = await fetch("/api/admin/status", { cache: "no-store" });
   const data = (await response.json()) as Status;
   if (!response.ok) {
     throw new Error(data.error || "Verbindungsprüfung fehlgeschlagen.");

@@ -14,6 +14,14 @@ import type { ExamAttempt, ExamEvent, QuizState } from "@/lib/quiz-types";
 
 const STORAGE_KEY = "alphaquiz-state-v2";
 const LEGACY_STORAGE_KEY = "alphaquiz-state-v1";
+const RESOURCE_ENDPOINTS = [
+  ["categories", "/api/admin/categories"],
+  ["topics", "/api/admin/topics"],
+  ["questions", "/api/admin/questions"],
+  ["quizzes", "/api/admin/quizzes"],
+  ["exports", "/api/admin/exports"],
+  ["examPublications", "/api/admin/exam-publications"],
+] as const;
 
 function isPublicExamPath() {
   return window.location.pathname.startsWith("/exam/");
@@ -45,6 +53,7 @@ export function useAdminStateSync(
   const [remoteReady, setRemoteReady] = useState(false);
   const lastExternalEventRef = useRef("");
   const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const remoteSnapshotRef = useRef<QuizState | null>(null);
   const persistedState = useMemo<QuizState>(
     () => ({
       categories: state.categories,
@@ -78,7 +87,7 @@ export function useAdminStateSync(
       }
 
       try {
-        const response = await fetch("/api/supabase?state=1", {
+        const response = await fetch("/api/admin/state", {
           cache: "no-store",
         });
         const data = (await response.json()) as {
@@ -92,6 +101,11 @@ export function useAdminStateSync(
         const remoteState = normalizeQuizState(data.state);
         if (cancelled) return;
         setState(remoteState);
+        remoteSnapshotRef.current = {
+          ...remoteState,
+          examAttempts: [],
+          examEvents: [],
+        };
         setRemoteReady(true);
         setReady(true);
         try {
@@ -135,23 +149,33 @@ export function useAdminStateSync(
       syncQueueRef.current = syncQueueRef.current
         .catch(() => undefined)
         .then(async () => {
-          const response = await fetch("/api/supabase", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(snapshot),
-          });
-          if (response.ok) {
-            try {
-              cacheAdminState(snapshot);
-            } catch {
-              showToast(
-                "Der lokale Zwischenspeicher ist voll. Die Daten bleiben in Supabase gespeichert.",
-              );
+          const previous = remoteSnapshotRef.current;
+          for (const [resource, endpoint] of RESOURCE_ENDPOINTS) {
+            if (
+              previous &&
+              JSON.stringify(previous[resource]) ===
+                JSON.stringify(snapshot[resource])
+            ) {
+              continue;
             }
-            return;
+            const response = await fetch(endpoint, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ [resource]: snapshot[resource] }),
+            });
+            if (!response.ok) {
+              const data = (await response.json()) as { error?: string };
+              throw new Error(data.error ?? "Synchronisierung fehlgeschlagen.");
+            }
           }
-          const data = (await response.json()) as { error?: string };
-          throw new Error(data.error ?? "Synchronisierung fehlgeschlagen.");
+          remoteSnapshotRef.current = snapshot;
+          try {
+            cacheAdminState(snapshot);
+          } catch {
+            showToast(
+              "Der lokale Zwischenspeicher ist voll. Die Daten bleiben in Supabase gespeichert.",
+            );
+          }
         })
         .catch((error: unknown) => {
           showToast(
@@ -170,7 +194,7 @@ export function useAdminStateSync(
 
     async function refreshActivity() {
       try {
-        const response = await fetch("/api/supabase?activity=1", {
+        const response = await fetch("/api/admin/activity", {
           cache: "no-store",
         });
         const data = (await response.json()) as {
