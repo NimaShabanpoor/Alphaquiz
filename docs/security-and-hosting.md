@@ -15,9 +15,11 @@ ausgewertet.
 
 ## Erforderliche Einrichtung
 
-1. `supabase/schema.sql` bei einer neuen Installation ausführen.
-2. Bei einer bestehenden Installation zusätzlich
-   `supabase/migrations/20260731_security_hardening.sql` ausführen.
+1. Bei einer neuen Installation `npm run db:setup` ausführen. Das aktuelle
+   `supabase/schema.sql` enthält Ownership, Indizes und Policies.
+2. Bei einer bestehenden Installation die versionierten Migrationen mit der
+   Supabase CLI (`supabase link`, danach `supabase db push`) anwenden. Keine
+   Änderungen direkt im SQL Editor oder Table Editor vornehmen.
 3. In Supabase Auth genau das Admin-Konto anlegen.
 4. `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` und `ADMIN_EMAIL` setzen.
 5. Optional `RESEND_API_KEY` und `RESEND_FROM_EMAIL` setzen.

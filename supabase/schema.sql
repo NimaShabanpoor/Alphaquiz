@@ -1,5 +1,6 @@
 create table if not exists public.categories (
   id text primary key,
+  user_id uuid not null references auth.users(id),
   name text not null,
   color text not null default '#6f8785'
 );
@@ -12,6 +13,7 @@ create table if not exists public.topics (
 
 create table if not exists public.questions (
   id text primary key,
+  user_id uuid not null references auth.users(id),
   title text not null,
   description text not null default '',
   image jsonb,
@@ -32,6 +34,7 @@ create table if not exists public.answers (
 
 create table if not exists public.quizzes (
   id text primary key,
+  user_id uuid not null references auth.users(id),
   title text not null,
   description text not null default '',
   "categoryId" text references public.categories(id),
@@ -62,11 +65,17 @@ create table if not exists public.quiz_questions (
 
 create table if not exists public.exports (
   id text primary key,
+  user_id uuid not null references auth.users(id),
   "quizId" text not null references public.quizzes(id) on delete cascade,
   format text not null,
   "fileName" text not null,
   "createdAt" timestamptz not null default now()
 );
+
+create index if not exists categories_user_id_idx on public.categories (user_id);
+create index if not exists questions_user_id_idx on public.questions (user_id);
+create index if not exists quizzes_user_id_idx on public.quizzes (user_id);
+create index if not exists exports_user_id_idx on public.exports (user_id);
 
 create table if not exists public.exam_publications (
   id text primary key,
@@ -191,14 +200,155 @@ grant all privileges on table public.exam_attempts to service_role;
 grant all privileges on table public.exam_instances to service_role;
 grant all privileges on table public.exam_events to service_role;
 
-revoke all on table public.categories from anon, authenticated;
-revoke all on table public.topics from anon, authenticated;
-revoke all on table public.questions from anon, authenticated;
-revoke all on table public.answers from anon, authenticated;
-revoke all on table public.quizzes from anon, authenticated;
-revoke all on table public.quiz_questions from anon, authenticated;
-revoke all on table public.exports from anon, authenticated;
-revoke all on table public.exam_publications from anon, authenticated;
-revoke all on table public.exam_attempts from anon, authenticated;
-revoke all on table public.exam_instances from anon, authenticated;
-revoke all on table public.exam_events from anon, authenticated;
+do $$
+declare
+  policy_rule record;
+begin
+  for policy_rule in
+    select *
+    from (
+      values
+        ('categories', '((select auth.uid()) = user_id)'),
+        (
+          'topics',
+          'exists (select 1 from public.categories as category where category.id = topics."categoryId" and category.user_id = (select auth.uid()))'
+        ),
+        ('questions', '((select auth.uid()) = user_id)'),
+        (
+          'answers',
+          'exists (select 1 from public.questions as question where question.id = answers."questionId" and question.user_id = (select auth.uid()))'
+        ),
+        ('quizzes', '((select auth.uid()) = user_id)'),
+        (
+          'quiz_questions',
+          'exists (select 1 from public.quizzes as quiz where quiz.id = quiz_questions."quizId" and quiz.user_id = (select auth.uid())) and exists (select 1 from public.questions as question where question.id = quiz_questions."questionId" and question.user_id = (select auth.uid()))'
+        ),
+        ('exports', '((select auth.uid()) = user_id)'),
+        (
+          'exam_publications',
+          'exists (select 1 from public.quizzes as quiz where quiz.id = exam_publications."quizId" and quiz.user_id = (select auth.uid()))'
+        ),
+        (
+          'exam_attempts',
+          'exists (select 1 from public.exam_publications as publication join public.quizzes as quiz on quiz.id = publication."quizId" where publication.id = exam_attempts."publicationId" and quiz.user_id = (select auth.uid()))'
+        ),
+        (
+          'exam_instances',
+          'exists (select 1 from public.exam_publications as publication join public.quizzes as quiz on quiz.id = publication."quizId" where publication.id = exam_instances."publicationId" and quiz.user_id = (select auth.uid()))'
+        ),
+        (
+          'exam_events',
+          'exists (select 1 from public.exam_publications as publication join public.quizzes as quiz on quiz.id = publication."quizId" where publication.id = exam_events."publicationId" and quiz.user_id = (select auth.uid()))'
+        )
+    ) as ownership(table_name, predicate)
+  loop
+    execute format(
+      'drop policy if exists %I on public.%I',
+      policy_rule.table_name || '_select_own',
+      policy_rule.table_name
+    );
+    execute format(
+      'create policy %I on public.%I for select to authenticated using (%s)',
+      policy_rule.table_name || '_select_own',
+      policy_rule.table_name,
+      policy_rule.predicate
+    );
+
+    execute format(
+      'drop policy if exists %I on public.%I',
+      policy_rule.table_name || '_insert_own',
+      policy_rule.table_name
+    );
+    execute format(
+      'create policy %I on public.%I for insert to authenticated with check (%s)',
+      policy_rule.table_name || '_insert_own',
+      policy_rule.table_name,
+      policy_rule.predicate
+    );
+
+    execute format(
+      'drop policy if exists %I on public.%I',
+      policy_rule.table_name || '_update_own',
+      policy_rule.table_name
+    );
+    execute format(
+      'create policy %I on public.%I for update to authenticated using (%s) with check (%s)',
+      policy_rule.table_name || '_update_own',
+      policy_rule.table_name,
+      policy_rule.predicate,
+      policy_rule.predicate
+    );
+
+    execute format(
+      'drop policy if exists %I on public.%I',
+      policy_rule.table_name || '_delete_own',
+      policy_rule.table_name
+    );
+    execute format(
+      'create policy %I on public.%I for delete to authenticated using (%s)',
+      policy_rule.table_name || '_delete_own',
+      policy_rule.table_name,
+      policy_rule.predicate
+    );
+  end loop;
+end
+$$;
+
+revoke all on all tables in schema public from anon, authenticated;
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on table
+  public.categories,
+  public.topics,
+  public.questions,
+  public.answers,
+  public.quizzes,
+  public.quiz_questions,
+  public.exports,
+  public.exam_publications,
+  public.exam_attempts,
+  public.exam_instances,
+  public.exam_events
+to authenticated;
+
+do $$
+declare
+  tables_without_rls text;
+  missing_crud_policies text;
+begin
+  select string_agg(format('%I.%I', namespace.nspname, relation.relname), ', ')
+  into tables_without_rls
+  from pg_class as relation
+  join pg_namespace as namespace on namespace.oid = relation.relnamespace
+  where namespace.nspname = 'public'
+    and relation.relkind in ('r', 'p')
+    and not relation.relrowsecurity;
+
+  if tables_without_rls is not null then
+    raise exception 'Public tables without RLS: %', tables_without_rls;
+  end if;
+
+  select string_agg(
+    format('%I.%I:%s', namespace.nspname, relation.relname, command.name),
+    ', '
+  )
+  into missing_crud_policies
+  from pg_class as relation
+  join pg_namespace as namespace on namespace.oid = relation.relnamespace
+  cross join (
+    values ('r', 'select'), ('a', 'insert'), ('w', 'update'), ('d', 'delete')
+  ) as command(code, name)
+  where namespace.nspname = 'public'
+    and relation.relkind in ('r', 'p')
+    and relation.relrowsecurity
+    and not exists (
+      select 1
+      from pg_policy as policy
+      where policy.polrelid = relation.oid
+        and policy.polcmd = command.code
+    );
+
+  if missing_crud_policies is not null then
+    raise exception 'Missing CRUD RLS policies: %', missing_crud_policies;
+  end if;
+end
+$$;
