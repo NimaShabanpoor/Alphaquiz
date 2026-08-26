@@ -1,5 +1,4 @@
 import { requireAdmin } from "@/lib/admin-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
 
@@ -11,16 +10,8 @@ export async function POST(request: Request, context: RouteContext) {
   const auth = await requireAdmin(request);
   if (auth.response) return auth.response;
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase.client) {
-    return Response.json(
-      { error: supabase.error ?? "Supabase ist nicht konfiguriert." },
-      { status: 503 },
-    );
-  }
-
   const { attemptId } = await context.params;
-  const { data: attempt, error: readError } = await supabase.client
+  const { data: attempt, error: readError } = await auth.client
     .from("exam_attempts")
     .select("id,publicationId,status")
     .eq("id", attemptId)
@@ -42,7 +33,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const updatedAt = new Date().toISOString();
-  const { error: updateError } = await supabase.client
+  const { error: updateError } = await auth.client
     .from("exam_attempts")
     .update({ status: "reset", updatedAt })
     .eq("id", attemptId);
@@ -50,7 +41,7 @@ export async function POST(request: Request, context: RouteContext) {
     return Response.json({ error: updateError.message }, { status: 502 });
   }
 
-  const { error: eventError } = await supabase.client
+  const { error: eventError } = await auth.client
     .from("exam_events")
     .insert({
       id: `event-${crypto.randomUUID()}`,

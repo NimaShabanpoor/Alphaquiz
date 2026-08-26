@@ -223,6 +223,22 @@
   padding: var(--sp-7) var(--sp-7) 56px;
 }
 
+.dataNotice {
+  background: #fff4df;
+  border: 1px solid #e9bd74;
+  border-radius: var(--r-ctl);
+  color: #674411;
+  font-weight: 700;
+  margin-bottom: var(--sp-5);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.dataContentLocked {
+  opacity: 0.55;
+  pointer-events: none;
+  user-select: none;
+}
+
 .mobileBar {
   display: none;
 }

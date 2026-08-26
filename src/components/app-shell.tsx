@@ -91,7 +91,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const { state, toast } = useQuizApp();
+  const { connected, ready, state, toast } = useQuizApp();
   const violationCount = state.examEvents.filter(
     (event) =>
       event.type === "tab-hidden" || event.type === "fullscreen-exit",
@@ -116,6 +116,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   ) {
     return <>{children}</>;
   }
+
+  const dataUnavailable = !ready || !connected;
+  const lockContent = pathname !== "/settings" && dataUnavailable;
 
   return (
     <div className={styles.shell}>
@@ -188,7 +191,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         />
       ) : null}
 
-      <main className={styles.main}>{children}</main>
+      <main className={styles.main}>
+        {dataUnavailable ? (
+          <div
+            className={styles.dataNotice}
+            role={ready ? "alert" : "status"}
+          >
+            {ready
+              ? "Supabase ist nicht erreichbar. Der letzte Stand wird nur angezeigt und kann nicht bearbeitet werden."
+              : "Daten werden sicher aus Supabase geladen …"}
+          </div>
+        ) : null}
+        <div
+          className={lockContent ? styles.dataContentLocked : undefined}
+          inert={lockContent}
+        >
+          {children}
+        </div>
+      </main>
 
       {toast ? (
         <div className={styles.toast} role="status">

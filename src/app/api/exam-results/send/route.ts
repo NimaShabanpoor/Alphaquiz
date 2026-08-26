@@ -1,6 +1,5 @@
 import { requireAdmin } from "@/lib/admin-auth";
 import { sendAttemptResultEmail } from "@/lib/result-email";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
 
@@ -13,14 +12,6 @@ export async function POST(request: Request) {
   const auth = await requireAdmin(request);
   if (auth.response) return auth.response;
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase.client) {
-    return Response.json(
-      { error: supabase.error ?? "Supabase ist nicht konfiguriert." },
-      { status: 503 },
-    );
-  }
-
   try {
     const body = (await request.json()) as SendBody;
     if (!body.attemptId) {
@@ -30,7 +21,7 @@ export async function POST(request: Request) {
       );
     }
     const result = await sendAttemptResultEmail(
-      supabase.client,
+      auth.client,
       body.attemptId,
       body.deliveryId,
     );

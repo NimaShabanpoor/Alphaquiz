@@ -33,6 +33,34 @@ verwaltet und automatisch erneuert. `src/proxy.ts` führt ausschliesslich einen
 optimistischen UX-Redirect aus. Autorisierung erfolgt in jedem geschützten
 Route Handler erneut über `auth.getUser()` und `requireAdmin()`.
 
+## Datenpfad und Service Role
+
+Supabase ist die Quelle der Wahrheit für Kategorien, Unterkategorien, Fragen,
+Quizzes, Exporte und Prüfungsdaten. `localStorage` enthält ausschliesslich den
+letzten erfolgreich aus Supabase geladenen oder dort gespeicherten Stand als
+temporären Anzeigecache. Ein leerer Datenbankstand bleibt leer und wird nicht
+durch lokale Beispieldaten überschrieben. Ist Supabase nicht erreichbar, wird
+der Cache ausschliesslich im Nur-Lese-Modus angezeigt und niemals automatisch
+zurück in die Datenbank geschrieben.
+
+Alle angemeldeten Admin-Zugriffe verwenden den request-scoped Supabase-Client
+aus `requireAdmin()`. Dadurch wird die Benutzer-Session an PostgreSQL
+weitergereicht und die RLS-Ownership-Policy ausgewertet. `user_id` wird für
+direkt verwaltete Tabellen serverseitig aus `auth.getUser()` gesetzt.
+
+Der Service-Role-Client verbleibt ausschliesslich in diesen öffentlichen
+Prüfungsendpunkten:
+
+- `GET/POST /api/public/exams/[slug]`: Teilnehmende besitzen bewusst kein
+  Supabase-Konto. Der Server muss die nicht öffentlich lesbaren Prüfungsdaten
+  laden und nach Eingabe von Name und E-Mail einen Versuch anlegen.
+- `GET/PATCH/POST /api/public/exam-attempts/[attemptId]`: Der Zugriff wird mit
+  einem zufälligen, nur gehasht gespeicherten Versuchstoken autorisiert. Der
+  Server benötigt anschliessend Zugriff auf die RLS-geschützte Instanz, ohne
+  dem Browser Tabellenrechte oder den Service-Role-Key zu geben.
+
+In Admin-Endpunkten ist die Verwendung des Service-Role-Clients nicht erlaubt.
+
 ## Vercel
 
 Das Projekt kann als normales Next.js-Projekt importiert werden. Die

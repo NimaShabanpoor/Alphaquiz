@@ -79,6 +79,7 @@ async function deleteMissingQuizQuestionLinks(
 
 export async function syncAdminState(
   client: SupabaseClient,
+  userId: string,
   state: QuizState,
 ) {
   const answers = state.questions.flatMap((question) =>
@@ -96,7 +97,16 @@ export async function syncAdminState(
     })),
   );
 
-  await upsert(client, "categories", state.categories);
+  await upsert(
+    client,
+    "categories",
+    state.categories.map((category) => ({
+      id: category.id,
+      user_id: userId,
+      name: category.name,
+      color: category.color,
+    })),
+  );
   await upsert(client, "topics", state.topics);
   await Promise.all([
     upsert(
@@ -104,6 +114,7 @@ export async function syncAdminState(
       "questions",
       state.questions.map((question) => ({
         id: question.id,
+        user_id: userId,
         title: question.title,
         description: question.description,
         image: question.image ?? null,
@@ -119,6 +130,7 @@ export async function syncAdminState(
       "quizzes",
       state.quizzes.map((quiz) => ({
         id: quiz.id,
+        user_id: userId,
         title: quiz.title,
         description: quiz.description,
         categoryId: quiz.categoryId,
@@ -134,7 +146,18 @@ export async function syncAdminState(
   await Promise.all([
     upsert(client, "answers", answers),
     upsert(client, "quiz_questions", quizQuestionLinks, "quizId,questionId"),
-    upsert(client, "exports", state.exports),
+    upsert(
+      client,
+      "exports",
+      state.exports.map((record) => ({
+        id: record.id,
+        user_id: userId,
+        quizId: record.quizId,
+        format: record.format,
+        fileName: record.fileName,
+        createdAt: record.createdAt,
+      })),
+    ),
   ]);
   await upsert(
     client,

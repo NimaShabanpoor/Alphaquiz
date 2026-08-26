@@ -2,7 +2,6 @@ import { isQuizStatePayload } from "@/lib/admin-state-reconciliation";
 import { loadAdminState, loadExamActivity } from "@/lib/admin-state";
 import { syncAdminState } from "@/lib/admin-state-sync";
 import { requireAdmin } from "@/lib/admin-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
 
@@ -10,25 +9,16 @@ export async function GET(request: Request) {
   const auth = await requireAdmin(request);
   if (auth.response) return auth.response;
 
-  const current = getSupabaseAdmin();
-  if (!current.client) {
-    return Response.json({
-      configured: current.configured,
-      reachable: false,
-      error: current.error,
-    });
-  }
-
   try {
     const searchParams = new URL(request.url).searchParams;
     if (searchParams.get("state") === "1") {
-      return Response.json({ state: await loadAdminState(current.client) });
+      return Response.json({ state: await loadAdminState(auth.client) });
     }
     if (searchParams.get("activity") === "1") {
-      return Response.json(await loadExamActivity(current.client));
+      return Response.json(await loadExamActivity(auth.client));
     }
 
-    const { error } = await current.client
+    const { error } = await auth.client
       .from("categories")
       .select("id")
       .limit(1);
@@ -53,14 +43,6 @@ export async function POST(request: Request) {
   const auth = await requireAdmin(request);
   if (auth.response) return auth.response;
 
-  const current = getSupabaseAdmin();
-  if (!current.client) {
-    return Response.json(
-      { error: current.error ?? "Supabase ist nicht vollständig konfiguriert." },
-      { status: 503 },
-    );
-  }
-
   try {
     const payload: unknown = await request.json();
     if (!isQuizStatePayload(payload)) {
@@ -69,7 +51,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    await syncAdminState(current.client, payload);
+    await syncAdminState(auth.client, auth.user.id, payload);
     return Response.json({ synced: true, syncedAt: new Date().toISOString() });
   } catch (error) {
     return Response.json(
@@ -98,15 +80,7 @@ export async function DELETE(request: Request) {
     );
   }
 
-  const current = getSupabaseAdmin();
-  if (!current.client) {
-    return Response.json(
-      { error: current.error ?? "Supabase ist nicht vollständig konfiguriert." },
-      { status: 503 },
-    );
-  }
-
-  const { error } = await current.client
+  const { error } = await auth.client
     .from("exam_publications")
     .delete()
     .eq("id", publicationId);

@@ -1,6 +1,17 @@
 import type { QuizState } from "@/lib/quiz-types";
 import { defaultExamRandomizationConfig } from "@/lib/exam-randomization";
 
+export const emptyQuizState: QuizState = {
+  categories: [],
+  topics: [],
+  questions: [],
+  quizzes: [],
+  exports: [],
+  examPublications: [],
+  examAttempts: [],
+  examEvents: [],
+};
+
 export const seedState: QuizState = {
   categories: [
     { id: "cat-excel", name: "Excel", color: "#dd6b4d" },

@@ -1,10 +1,16 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type AdminUser = {
   id: string;
   email: string;
+};
+
+type AuthenticatedAdmin = {
+  client: SupabaseClient;
+  user: AdminUser;
 };
 
 export function isAllowedAdminEmail(email: string) {
@@ -15,7 +21,7 @@ export function isAllowedAdminEmail(email: string) {
   return !configuredAdminEmail || email === configuredAdminEmail;
 }
 
-export async function getAdminUser(): Promise<AdminUser | null> {
+async function getAuthenticatedAdmin(): Promise<AuthenticatedAdmin | null> {
   let supabase;
   try {
     supabase = await createSupabaseServerClient();
@@ -28,7 +34,14 @@ export async function getAdminUser(): Promise<AdminUser | null> {
   if (error || !data.user || !email) return null;
   if (!isAllowedAdminEmail(email)) return null;
 
-  return { id: data.user.id, email };
+  return {
+    client: supabase,
+    user: { id: data.user.id, email },
+  };
+}
+
+export async function getAdminUser(): Promise<AdminUser | null> {
+  return (await getAuthenticatedAdmin())?.user ?? null;
 }
 
 export async function requireAdmin(request: Request) {
@@ -36,6 +49,7 @@ export async function requireAdmin(request: Request) {
     const origin = request.headers.get("origin");
     if (origin && origin !== new URL(request.url).origin) {
       return {
+        client: null,
         user: null,
         response: Response.json(
           { error: "Diese Anfrage stammt nicht von AlphaQuiz." },
@@ -45,9 +59,10 @@ export async function requireAdmin(request: Request) {
     }
   }
 
-  const user = await getAdminUser();
-  if (!user) {
+  const admin = await getAuthenticatedAdmin();
+  if (!admin) {
     return {
+      client: null,
       user: null,
       response: Response.json(
         { error: "Du musst als Administrator angemeldet sein." },
@@ -56,5 +71,5 @@ export async function requireAdmin(request: Request) {
     } as const;
   }
 
-  return { user, response: null } as const;
+  return { ...admin, response: null } as const;
 }

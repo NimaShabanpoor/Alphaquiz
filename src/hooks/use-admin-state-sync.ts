@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { normalizeQuizState } from "@/lib/quiz-state-normalization";
-import { seedState } from "@/lib/seed-data";
+import { emptyQuizState } from "@/lib/seed-data";
 import type { ExamAttempt, ExamEvent, QuizState } from "@/lib/quiz-types";
 
 const STORAGE_KEY = "alphaquiz-state-v2";
@@ -24,12 +24,25 @@ export function clearLocalAdminState() {
   window.localStorage.removeItem(LEGACY_STORAGE_KEY);
 }
 
+function readCachedAdminState() {
+  const stored =
+    window.localStorage.getItem(STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_STORAGE_KEY);
+  return stored ? normalizeQuizState(JSON.parse(stored)) : emptyQuizState;
+}
+
+function cacheAdminState(state: QuizState) {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+}
+
 export function useAdminStateSync(
   state: QuizState,
   setState: Dispatch<SetStateAction<QuizState>>,
   showToast: (message: string) => void,
 ) {
   const [ready, setReady] = useState(false);
+  const [remoteReady, setRemoteReady] = useState(false);
   const lastExternalEventRef = useRef("");
   const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
   const persistedState = useMemo<QuizState>(
@@ -57,70 +70,66 @@ export function useAdminStateSync(
     let cancelled = false;
 
     async function loadInitialState() {
-      let nextState: QuizState = seedState;
-      if (!isPublicExamPath()) {
+      if (isPublicExamPath()) {
+        if (cancelled) return;
+        setState(emptyQuizState);
+        setReady(true);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/supabase?state=1", {
+          cache: "no-store",
+        });
+        const data = (await response.json()) as {
+          error?: string;
+          state?: QuizState;
+        };
+        if (!response.ok || !data.state) {
+          throw new Error(data.error ?? "Supabase-Daten konnten nicht geladen werden.");
+        }
+
+        const remoteState = normalizeQuizState(data.state);
+        if (cancelled) return;
+        setState(remoteState);
+        setRemoteReady(true);
+        setReady(true);
         try {
-          const stored =
-            window.localStorage.getItem(STORAGE_KEY) ??
-            window.localStorage.getItem(LEGACY_STORAGE_KEY);
-          if (stored) nextState = normalizeQuizState(JSON.parse(stored));
+          cacheAdminState({
+            ...remoteState,
+            examAttempts: [],
+            examEvents: [],
+          });
+        } catch {
+          showToast(
+            "Der lokale Zwischenspeicher ist voll. Die Daten bleiben in Supabase gespeichert.",
+          );
+        }
+      } catch {
+        let cachedState = emptyQuizState;
+        try {
+          cachedState = readCachedAdminState();
         } catch {
           clearLocalAdminState();
         }
-
-        try {
-          const response = await fetch("/api/supabase?state=1", {
-            cache: "no-store",
-          });
-          const data = (await response.json()) as { state?: QuizState };
-          const remote = data.state;
-          if (
-            response.ok &&
-            remote &&
-            (remote.quizzes.length ||
-              remote.questions.length ||
-              remote.categories.length ||
-              remote.examPublications.length)
-          ) {
-            nextState = normalizeQuizState(remote);
-          }
-        } catch {
-          // Offline bleibt der zuletzt lokal gespeicherte Admin-Inhalt verfügbar.
-        }
+        if (cancelled) return;
+        setState(cachedState);
+        setRemoteReady(false);
+        setReady(true);
+        showToast(
+          "Supabase ist nicht erreichbar. Es wird nur der letzte gespeicherte Stand angezeigt.",
+        );
       }
-
-      if (cancelled) return;
-      setState(nextState);
-      setReady(true);
     }
 
     void loadInitialState();
     return () => {
       cancelled = true;
     };
-  }, [setState]);
+  }, [setState, showToast]);
 
   useEffect(() => {
-    if (isPublicExamPath() || !ready) return;
-    let quotaTimer: number | undefined;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedState));
-    } catch {
-      quotaTimer = window.setTimeout(
-        () =>
-          showToast(
-            "Der lokale Speicher ist voll. Entferne grosse Bilder oder synchronisiere mit Supabase.",
-          ),
-        0,
-      );
-    }
-    return () => {
-      if (quotaTimer) window.clearTimeout(quotaTimer);
-    };
-  }, [persistedState, ready, showToast]);
-
-  useEffect(() => {
-    if (!ready || isPublicExamPath()) return;
+    if (!ready || !remoteReady || isPublicExamPath()) return;
     const timer = window.setTimeout(() => {
       const snapshot = persistedState;
       syncQueueRef.current = syncQueueRef.current
@@ -131,7 +140,16 @@ export function useAdminStateSync(
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(snapshot),
           });
-          if (response.ok) return;
+          if (response.ok) {
+            try {
+              cacheAdminState(snapshot);
+            } catch {
+              showToast(
+                "Der lokale Zwischenspeicher ist voll. Die Daten bleiben in Supabase gespeichert.",
+              );
+            }
+            return;
+          }
           const data = (await response.json()) as { error?: string };
           throw new Error(data.error ?? "Synchronisierung fehlgeschlagen.");
         })
@@ -144,10 +162,10 @@ export function useAdminStateSync(
         });
     }, 1500);
     return () => window.clearTimeout(timer);
-  }, [persistedState, ready, showToast]);
+  }, [persistedState, ready, remoteReady, showToast]);
 
   useEffect(() => {
-    if (!ready || isPublicExamPath()) return;
+    if (!ready || !remoteReady || isPublicExamPath()) return;
     let cancelled = false;
 
     async function refreshActivity() {
@@ -190,25 +208,7 @@ export function useAdminStateSync(
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [ready, setState, showToast]);
+  }, [ready, remoteReady, setState, showToast]);
 
-  useEffect(() => {
-    function syncFromAnotherTab(event: StorageEvent) {
-      if (event.key !== STORAGE_KEY || !event.newValue) return;
-      try {
-        const nextState = normalizeQuizState(JSON.parse(event.newValue));
-        setState((current) => ({
-          ...nextState,
-          examAttempts: current.examAttempts,
-          examEvents: current.examEvents,
-        }));
-      } catch {
-        // Ein beschädigter Eintrag in einem anderen Tab wird ignoriert.
-      }
-    }
-    window.addEventListener("storage", syncFromAnotherTab);
-    return () => window.removeEventListener("storage", syncFromAnotherTab);
-  }, [setState]);
-
-  return ready;
+  return { connected: remoteReady, ready };
 }

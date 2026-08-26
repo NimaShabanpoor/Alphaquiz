@@ -50,6 +50,8 @@ Admin-Konto anmelden. Prüfungslinks werden unter
 
 Browser- und Benutzersitzungen verwenden den Publishable Key und
 `@supabase/ssr`. Der Service-Role-Key wird niemals an den Browser ausgeliefert.
+Supabase ist die zentrale Datenquelle; der Browser hält nur den letzten
+erfolgreich gespeicherten Stand als lokalen Anzeigecache.
 
 ## Ergebnis-E-Mails
 

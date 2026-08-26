@@ -18,7 +18,7 @@ import {
   deleteQuestionFromState,
   deleteQuizFromState,
 } from "@/lib/quiz-state-mutations";
-import { seedState } from "@/lib/seed-data";
+import { emptyQuizState, seedState } from "@/lib/seed-data";
 import type {
   Category,
   ExamAttempt,
@@ -35,6 +35,7 @@ import type {
 type AppContextValue = {
   state: QuizState;
   ready: boolean;
+  connected: boolean;
   toast: string;
   showToast: (message: string) => void;
   createQuiz: () => string;
@@ -83,7 +84,7 @@ function slugify(value: string) {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<QuizState>(seedState);
+  const [state, setState] = useState<QuizState>(emptyQuizState);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<number | null>(null);
   const showToast = useCallback((message: string) => {
@@ -92,7 +93,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     toastTimer.current = window.setTimeout(() => setToast(""), 3000);
   }, []);
 
-  const ready = useAdminStateSync(state, setState, showToast);
+  const { connected, ready } = useAdminStateSync(
+    state,
+    setState,
+    showToast,
+  );
 
   const createQuiz = useCallback(() => {
     const id = makeId("quiz");
@@ -497,6 +502,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     () => ({
       state,
       ready,
+      connected,
       toast,
       showToast,
       createQuiz,
@@ -525,6 +531,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [
       state,
       ready,
+      connected,
       toast,
       showToast,
       createQuiz,
