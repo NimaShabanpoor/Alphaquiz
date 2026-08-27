@@ -17,6 +17,11 @@ type AuthenticatedAdmin = {
   user: AdminUser;
 };
 
+type AdminAuthentication =
+  | { state: "authorized"; admin: AuthenticatedAdmin }
+  | { state: "unauthenticated" }
+  | { state: "forbidden" };
+
 export function isAllowedAdminEmail(email: string) {
   const configuredAdminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   if (process.env.NODE_ENV === "production" && !configuredAdminEmail) {
@@ -25,27 +30,33 @@ export function isAllowedAdminEmail(email: string) {
   return !configuredAdminEmail || email === configuredAdminEmail;
 }
 
-async function getAuthenticatedAdmin(): Promise<AuthenticatedAdmin | null> {
+async function getAuthenticatedAdmin(): Promise<AdminAuthentication> {
   let supabase;
   try {
     supabase = await createSupabaseServerClient();
   } catch {
-    return null;
+    return { state: "unauthenticated" };
   }
 
   const { data, error } = await supabase.auth.getUser();
   const email = data.user?.email?.trim().toLowerCase();
-  if (error || !data.user || !email) return null;
-  if (!isAllowedAdminEmail(email)) return null;
+  if (error || !data.user || !email) return { state: "unauthenticated" };
+  if (!isAllowedAdminEmail(email)) return { state: "forbidden" };
 
   return {
-    client: supabase,
-    user: { id: data.user.id, email },
+    state: "authorized",
+    admin: {
+      client: supabase,
+      user: { id: data.user.id, email },
+    },
   };
 }
 
 export async function getAdminUser(): Promise<AdminUser | null> {
-  return (await getAuthenticatedAdmin())?.user ?? null;
+  const authentication = await getAuthenticatedAdmin();
+  return authentication.state === "authorized"
+    ? authentication.admin.user
+    : null;
 }
 
 export async function requireAdmin(request: Request) {
@@ -75,8 +86,8 @@ export async function requireAdmin(request: Request) {
     throw error;
   }
 
-  const admin = await getAuthenticatedAdmin();
-  if (!admin) {
+  const authentication = await getAuthenticatedAdmin();
+  if (authentication.state === "unauthenticated") {
     return {
       client: null,
       user: null,
@@ -87,5 +98,16 @@ export async function requireAdmin(request: Request) {
     } as const;
   }
 
-  return { ...admin, response: null } as const;
+  if (authentication.state === "forbidden") {
+    return {
+      client: null,
+      user: null,
+      response: Response.json(
+        { error: "Dieses Konto ist nicht als AlphaQuiz-Administrator freigeschaltet." },
+        { status: 403 },
+      ),
+    } as const;
+  }
+
+  return { ...authentication.admin, response: null } as const;
 }

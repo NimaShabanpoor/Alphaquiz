@@ -147,7 +147,7 @@ as $$
 declare
   current_count integer;
   current_reset timestamptz;
-  current_time timestamptz := clock_timestamp();
+  current_timestamp_value timestamptz := clock_timestamp();
 begin
   if p_key_hash !~ '^[0-9a-f]{64}$'
     or p_limit < 1
@@ -160,7 +160,7 @@ begin
   where key_hash in (
     select key_hash
     from private.request_rate_limits
-    where reset_at < current_time - interval '1 day'
+    where reset_at < current_timestamp_value - interval '1 day'
     order by reset_at
     limit 100
   );
@@ -174,28 +174,28 @@ begin
   values (
     p_key_hash,
     1,
-    current_time + make_interval(secs => p_window_seconds),
-    current_time
+    current_timestamp_value + make_interval(secs => p_window_seconds),
+    current_timestamp_value
   )
   on conflict (key_hash) do update
   set
     request_count = case
-      when rate_limit.reset_at <= current_time then 1
+      when rate_limit.reset_at <= current_timestamp_value then 1
       else least(rate_limit.request_count + 1, p_limit + 1)
     end,
     reset_at = case
-      when rate_limit.reset_at <= current_time
-        then current_time + make_interval(secs => p_window_seconds)
+      when rate_limit.reset_at <= current_timestamp_value
+        then current_timestamp_value + make_interval(secs => p_window_seconds)
       else rate_limit.reset_at
     end,
-    updated_at = current_time
+    updated_at = current_timestamp_value
   returning request_count, reset_at
   into current_count, current_reset;
 
   allowed := current_count <= p_limit;
   retry_after := case
     when allowed then 0
-    else greatest(1, ceil(extract(epoch from current_reset - current_time))::integer)
+    else greatest(1, ceil(extract(epoch from current_reset - current_timestamp_value))::integer)
   end;
   return next;
 end;

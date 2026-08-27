@@ -78,6 +78,12 @@ async function authorizeAttempt(request: Request, attemptId: string) {
     stored.instance,
     source.publication.timeLimit,
   );
+  if (attempt.status !== "in-progress") {
+    return {
+      error: "Dieser Prüfungsversuch ist bereits abgeschlossen.",
+      status: 403,
+    };
+  }
   return {
     client: supabase.client,
     source,
