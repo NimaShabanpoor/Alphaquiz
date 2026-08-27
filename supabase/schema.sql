@@ -261,6 +261,10 @@ create index if not exists categories_user_id_idx on public.categories (user_id)
 create index if not exists questions_user_id_idx on public.questions (user_id);
 create index if not exists quizzes_user_id_idx on public.quizzes (user_id);
 create index if not exists exports_user_id_idx on public.exports (user_id);
+create index if not exists answers_question_id_idx
+  on public.answers ("questionId");
+create index if not exists topics_category_id_idx
+  on public.topics ("categoryId");
 
 create table if not exists public.exam_publications (
   id text primary key,
@@ -297,6 +301,9 @@ alter table public.exam_publications
     "lockedQuestionIds":[],
     "retryMode":"regenerate"
   }'::jsonb;
+
+create index if not exists exam_publications_quiz_id_idx
+  on public.exam_publications ("quizId");
 
 create table if not exists public.exam_attempts (
   id text primary key,
@@ -344,6 +351,9 @@ create table if not exists public.exam_instances (
   "generatedAt" timestamptz not null default now(),
   "previousAttemptId" text
 );
+
+create index if not exists exam_instances_publication_id_idx
+  on public.exam_instances ("publicationId");
 
 create table if not exists public.exam_events (
   id text primary key,
