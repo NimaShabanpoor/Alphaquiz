@@ -1,6 +1,10 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  AppOriginConfigurationError,
+  trustedMutationOrigin,
+} from "@/lib/app-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type AdminUser = {
@@ -45,9 +49,8 @@ export async function getAdminUser(): Promise<AdminUser | null> {
 }
 
 export async function requireAdmin(request: Request) {
-  if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
-    const origin = request.headers.get("origin");
-    if (origin && origin !== new URL(request.url).origin) {
+  try {
+    if (!trustedMutationOrigin(request)) {
       return {
         client: null,
         user: null,
@@ -57,6 +60,19 @@ export async function requireAdmin(request: Request) {
         ),
       } as const;
     }
+  } catch (error) {
+    if (error instanceof AppOriginConfigurationError) {
+      console.error("[AlphaQuiz Auth] Ungültige APP_ORIGIN-Konfiguration", error);
+      return {
+        client: null,
+        user: null,
+        response: Response.json(
+          { error: "Die Anwendung ist nicht vollständig konfiguriert." },
+          { status: 503 },
+        ),
+      } as const;
+    }
+    throw error;
   }
 
   const admin = await getAuthenticatedAdmin();

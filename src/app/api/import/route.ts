@@ -2,6 +2,11 @@ import MDBReader from "mdb-reader";
 import type { Value } from "mdb-reader";
 import type { Category, Question, QuestionType } from "@/lib/quiz-types";
 import { requireAdmin } from "@/lib/admin-auth";
+import {
+  categoriesPayloadSchema,
+  questionsPayloadSchema,
+} from "@/lib/admin-resource-schemas";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -177,6 +182,15 @@ function parseAccess(buffer: Buffer) {
   };
 }
 
+function hasAccessSignature(buffer: Buffer) {
+  if (buffer.length < 32) return false;
+  const signature = buffer.subarray(4, 32).toString("ascii");
+  return (
+    signature.startsWith("Standard ACE DB") ||
+    signature.startsWith("Standard Jet DB")
+  );
+}
+
 function parseCsv(source: string) {
   const lines = source
     .replace(/^\uFEFF/, "")
@@ -245,19 +259,54 @@ function parseJson(source: string) {
   };
   const questions = parsed.questions ?? parsed.state?.questions ?? [];
   const categories = parsed.categories ?? parsed.state?.categories ?? [];
-  if (!Array.isArray(questions)) {
-    throw new Error("Die JSON-Datei enthält keine gültige Fragenliste.");
+  const parsedQuestions = questionsPayloadSchema.safeParse({ questions });
+  const parsedCategories = categoriesPayloadSchema.safeParse({ categories });
+  if (!parsedQuestions.success || !parsedCategories.success) {
+    throw new Error("invalid AlphaQuiz JSON");
   }
   return {
-    questions,
-    categories,
+    questions: parsedQuestions.data.questions,
+    categories: parsedCategories.data.categories,
     details: { tables: ["JSON"], questionTable: "questions" },
   };
 }
 
 export async function POST(request: Request) {
+  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+  if (!contentType.startsWith("multipart/form-data")) {
+    return Response.json(
+      { error: "Für den Import werden Formulardaten erwartet." },
+      { status: 415 },
+    );
+  }
+  const announcedLength = Number(request.headers.get("content-length"));
+  if (
+    Number.isFinite(announcedLength) &&
+    announcedLength > 26 * 1024 * 1024
+  ) {
+    return Response.json(
+      { error: "Die Importanfrage ist grösser als 26 MB." },
+      { status: 413 },
+    );
+  }
+
   const auth = await requireAdmin(request);
   if (auth.response) return auth.response;
+
+  const rateLimit = await checkRateLimit(request, "admin-import", 10, 60 * 60_000);
+  if (!rateLimit.allowed) {
+    return Response.json(
+      {
+        error: rateLimit.unavailable
+          ? "Der Import ist vorübergehend nicht verfügbar."
+          : "Zu viele Importe. Bitte versuche es später erneut.",
+      },
+      {
+        status: rateLimit.unavailable ? 503 : 429,
+        headers: { "Retry-After": String(rateLimit.retryAfter) },
+      },
+    );
+  }
 
   try {
     const data = await request.formData();
@@ -273,6 +322,15 @@ export async function POST(request: Request) {
     }
     const extension = file.name.split(".").pop()?.toLowerCase();
     const bytes = Buffer.from(await file.arrayBuffer());
+    if (
+      (extension === "accdb" || extension === "mdb") &&
+      !hasAccessSignature(bytes)
+    ) {
+      return Response.json(
+        { error: "Die Datei ist keine gültige Access-Datenbank." },
+        { status: 415 },
+      );
+    }
     const result =
       extension === "accdb" || extension === "mdb"
         ? parseAccess(bytes)
@@ -287,18 +345,28 @@ export async function POST(request: Request) {
         { status: 415 },
       );
     }
+    const parsedQuestions = questionsPayloadSchema.safeParse({
+      questions: result.questions,
+    });
+    const parsedCategories = categoriesPayloadSchema.safeParse({
+      categories: result.categories,
+    });
+    if (!parsedQuestions.success || !parsedCategories.success) {
+      return Response.json(
+        { error: "Die Datei enthält ungültige oder zu viele Quizdaten." },
+        { status: 400 },
+      );
+    }
     return Response.json({
       fileName: file.name,
       ...result,
+      questions: parsedQuestions.data.questions,
+      categories: parsedCategories.data.categories,
     });
   } catch (error) {
+    console.error("[AlphaQuiz Import] Datei konnte nicht gelesen werden", error);
     return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Die Datei konnte nicht gelesen werden.",
-      },
+      { error: "Die Datei konnte nicht gelesen werden. Bitte prüfe das Format." },
       { status: 400 },
     );
   }

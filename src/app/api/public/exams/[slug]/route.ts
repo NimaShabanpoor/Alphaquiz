@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   attemptCookieName,
   createAttemptAccessToken,
@@ -16,19 +17,20 @@ import {
 import type { ExamInstance } from "@/lib/quiz-types";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { readJsonBody, RequestBodyError } from "@/lib/request-body";
 
 export const runtime = "nodejs";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
 };
 
-type StartBody = {
-  name?: string;
-  email?: string;
-};
+const startSchema = z
+  .object({
+    name: z.string().trim().min(2).max(120),
+    email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
+  })
+  .strict();
 
 function unavailableMessage(
   active: boolean,
@@ -76,12 +78,38 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const rateLimit = checkRateLimit(request, "exam-start", 15, 15 * 60_000);
+  let parsed;
+  try {
+    parsed = startSchema.safeParse(await readJsonBody(request));
+  } catch (error) {
+    const status = error instanceof RequestBodyError ? error.status : 400;
+    return Response.json({ error: "Ungültige Startangaben." }, { status });
+  }
+  if (!parsed.success) {
+    return Response.json(
+      {
+        error:
+          "Bitte gib deinen vollständigen Namen und eine gültige E-Mail-Adresse ein.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const rateLimit = await checkRateLimit(
+    request,
+    "exam-start",
+    15,
+    15 * 60_000,
+  );
   if (!rateLimit.allowed) {
     return Response.json(
-      { error: "Zu viele Startversuche. Bitte warte einen Moment." },
       {
-        status: 429,
+        error: rateLimit.unavailable
+          ? "Der Prüfungsstart ist vorübergehend nicht verfügbar."
+          : "Zu viele Startversuche. Bitte warte einen Moment.",
+      },
+      {
+        status: rateLimit.unavailable ? 503 : 429,
         headers: { "Retry-After": String(rateLimit.retryAfter) },
       },
     );
@@ -97,24 +125,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    const body = (await request.json()) as StartBody;
-    const name = body.name?.trim() ?? "";
-    const email = body.email?.trim().toLowerCase() ?? "";
-    if (name.length < 2 || name.length > 120) {
-      return Response.json(
-        { error: "Bitte gib deinen vollständigen Namen ein." },
-        { status: 400 },
-      );
-    }
-    if (!EMAIL_PATTERN.test(email) || email.length > 254) {
-      return Response.json(
-        {
-          error:
-            "Bitte gib eine gültige E-Mail-Adresse ein, zum Beispiel name@firma.ch.",
-        },
-        { status: 400 },
-      );
-    }
+    const { name, email } = parsed.data;
 
     const source = await loadExamSourceBySlug(supabase.client, slug);
     if (!source) {
@@ -227,11 +238,14 @@ export async function POST(request: Request, context: RouteContext) {
       .single();
     if (attemptError) {
       const duplicate = attemptError.code === "23505";
+      if (!duplicate) {
+        console.error("[AlphaQuiz Prüfung] Versuch konnte nicht erstellt werden", attemptError);
+      }
       return Response.json(
         {
           error: duplicate
             ? "Für diese E-Mail-Adresse wurde der Versuch bereits gestartet."
-            : attemptError.message,
+            : "Der Prüfungsversuch konnte nicht erstellt werden.",
         },
         { status: duplicate ? 409 : 502 },
       );
@@ -279,7 +293,8 @@ export async function POST(request: Request, context: RouteContext) {
       secure: process.env.NODE_ENV === "production",
     });
     return response;
-  } catch {
+  } catch (error) {
+    console.error("[AlphaQuiz Prüfung] Start fehlgeschlagen", error);
     return Response.json(
       {
         error: "Die Prüfung konnte nicht gestartet werden.",

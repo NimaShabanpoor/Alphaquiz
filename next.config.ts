@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
       "style-src 'self' 'unsafe-inline'",
       `script-src 'self' 'unsafe-inline'${development ? " 'unsafe-eval'" : ""}`,
       `connect-src 'self'${development ? " ws: wss:" : ""}`,
+      ...(development ? [] : ["upgrade-insecure-requests"]),
     ].join("; ");
 
     return [
@@ -25,7 +26,7 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           {
-            key: "Content-Security-Policy",
+            key: "Content-Security-Policy-Report-Only",
             value: contentSecurityPolicy,
           },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -40,6 +41,8 @@ const nextConfig: NextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=31536000; includeSubDomains",
           },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
         ],
       },
     ];

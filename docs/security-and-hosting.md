@@ -22,11 +22,34 @@ ausgewertet.
    Änderungen direkt im SQL Editor oder Table Editor vornehmen.
 3. In Supabase Auth genau das Admin-Konto anlegen.
 4. `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
-   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` und `ADMIN_EMAIL` setzen.
+   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_EMAIL`, `APP_ORIGIN`
+   und `RATE_LIMIT_SECRET` setzen. `APP_ORIGIN` ist in Produktion die feste
+   HTTPS-Adresse ohne Pfad oder abschliessenden Schrägstrich.
 5. Optional `RESEND_API_KEY` und `RESEND_FROM_EMAIL` setzen.
+
+## Auth-URL und Redirect-Allow-List
+
+In Supabase unter **Authentication → URL Configuration** gelten exakt diese
+Werte:
+
+- **Site URL:** derselbe Wert wie `APP_ORIGIN`.
+- **Redirect URLs:** `${APP_ORIGIN}/login`.
+- Für die lokale Entwicklung zusätzlich `http://localhost:3000/login`.
+
+Keine Wildcards für Produktionsdomains eintragen. Preview-Deployments erhalten
+entweder ein separates Supabase-Projekt oder werden einzeln freigeschaltet.
+Passwort-Links verwenden nie `Host`, `Origin` oder andere vom Request
+beeinflussbare Header, sondern ausschliesslich `APP_ORIGIN`.
 
 Der Service-Role-Key darf niemals mit `NEXT_PUBLIC_` beginnen und gehört nur
 in die Server-Umgebung.
+
+`RATE_LIMIT_SECRET` muss mindestens 32 zufällige Bytes enthalten und darf
+ebenfalls nie an den Browser gelangen. Die Drosselungszähler liegen in der
+nicht über PostgREST erreichbaren Datenbankstruktur `private`. Für Hostpoint
+darf `TRUSTED_PROXY_HEADER` nur gesetzt werden, wenn der vorgeschaltete Proxy
+eingehende gleichnamige Client-Header entfernt. Vercel wird automatisch über
+`x-vercel-forwarded-for` erkannt.
 
 Admin-Sitzungen werden durch `@supabase/ssr` in Supabase-eigenen Cookies
 verwaltet und automatisch erneuert. `src/proxy.ts` führt ausschliesslich einen
@@ -68,6 +91,10 @@ Umgebungsvariablen werden in den Vercel-Projekteinstellungen gesetzt. Für
 geschäftliche Nutzung müssen die Vertrags- und Datenschutzbedingungen des
 gewählten Vercel-Tarifs separat geprüft werden.
 
+Vor der Freigabe müssen Produktions-, Preview- und Entwicklungsvariablen
+getrennt gesetzt sein. Preview-Deployments dürfen weder den produktiven
+Service-Role-Key noch echte Prüfungsdaten erhalten.
+
 ## Hostpoint
 
 Die App erzeugt mit `output: "standalone"` einen portablen Node.js-Server.
@@ -92,6 +119,36 @@ und Verfügbarkeitsgrenzen vor dem Start erneut zu prüfen.
 - Resultate nach der festgelegten Frist löschen oder anonymisieren.
 - Keine echten Prüfungsdaten in Demo-, Preview- oder Entwicklungsumgebungen
   kopieren.
+
+## Sicherheitsbetrieb vor Produktivstart
+
+- Die CSP wird zunächst als `Content-Security-Policy-Report-Only` ausgeliefert.
+  Meldungen in Browser- und Hosting-Logs prüfen, notwendige Quellen eng
+  ergänzen und die Richtlinie erst danach auf `Content-Security-Policy`
+  umstellen. `unsafe-inline` soll in einem separaten Schritt durch Nonces
+  ersetzt werden.
+- Supabase MFA für das Admin-Konto aktivieren, Service-Role-, Datenbank-,
+  Resend- und Rate-Limit-Schlüssel regelmässig rotieren.
+- Mit Supabase, Vercel/Hostpoint und Resend Auftragsbearbeitungsverträge sowie
+  Region, Unterauftragsbearbeiter und Löschfristen dokumentieren.
+- Eine feste Löschfrist für Namen, E-Mail-Adressen, Antworten, Ereignisse und
+  Resultate definieren. Löschung und Auskunft vor Produktivstart als
+  administrativen Prozess testen.
+- Verschlüsselte Backups erstellen und eine Wiederherstellung in einer
+  getrennten Umgebung testen. Ein Backup gilt erst nach erfolgreichem Restore
+  als geprüft.
+- Sicherheitsvorfälle mit Zeitpunkt, betroffenen Daten, Massnahmen und
+  Meldeentscheid dokumentieren. Secrets bei Verdacht sofort widerrufen.
+- Imports bleiben trotz Signatur-, Grössen- und Strukturprüfung nicht
+  virengeprüft. Dateien nur von vertrauenswürdigen Lehrpersonen annehmen und
+  bei erweitertem Nutzerkreis einen Malware-Scanner vorsehen.
+
+## Automatische Prüfungen
+
+Der Workflow `.github/workflows/ci.yml` führt bei Pushes und Pull Requests
+Installation aus dem Lockfile, Produktions-Audit, Linter, Tests, Typecheck und
+Build aus. Dependabot prüft npm- und GitHub-Actions-Abhängigkeiten wöchentlich.
+Ein roter Workflow darf nicht produktiv ausgerollt werden.
 
 Die technischen Massnahmen unterstützen den sicheren Betrieb, ersetzen aber
 keine rechtliche Prüfung für den konkreten Einsatz.

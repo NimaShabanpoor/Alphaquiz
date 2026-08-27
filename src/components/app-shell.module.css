@@ -2,6 +2,23 @@
   min-height: 100vh;
 }
 
+.skipLink {
+  background: var(--navy);
+  border-radius: var(--r-ctl);
+  color: #fff;
+  left: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  position: fixed;
+  top: var(--sp-4);
+  transform: translateY(-160%);
+  transition: transform 120ms ease;
+  z-index: 100;
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}
+
 .sidebar {
   background: var(--white);
   border-right: 1px solid var(--line);
@@ -221,6 +238,10 @@
   max-width: 980px;
   min-height: 100vh;
   padding: var(--sp-7) var(--sp-7) 56px;
+}
+
+.main:focus {
+  outline: none;
 }
 
 .dataNotice {

@@ -1,43 +1,60 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { isAllowedAdminEmail } from "@/lib/admin-auth";
+import { trustedMutationOrigin } from "@/lib/app-origin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { readJsonBody, RequestBodyError } from "@/lib/request-body";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-type LoginBody = {
-  email?: string;
-  password?: string;
-};
+const loginSchema = z
+  .object({
+    email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
+    password: z.string().min(1).max(1_024),
+  })
+  .strict();
 
 export async function POST(request: Request) {
-  const rateLimit = checkRateLimit(request, "admin-login", 10, 15 * 60_000);
+  if (!trustedMutationOrigin(request)) {
+    return NextResponse.json(
+      { error: "Diese Anfrage stammt nicht von AlphaQuiz." },
+      { status: 403 },
+    );
+  }
+
+  let parsed;
+  try {
+    parsed = loginSchema.safeParse(await readJsonBody(request));
+  } catch (error) {
+    const status = error instanceof RequestBodyError ? error.status : 400;
+    return NextResponse.json({ error: "Ungültige Anmeldedaten." }, { status });
+  }
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "E-Mail-Adresse oder Passwort ist ungültig." },
+      { status: 400 },
+    );
+  }
+
+  const rateLimit = await checkRateLimit(
+    request,
+    "admin-login",
+    10,
+    15 * 60_000,
+  );
   if (!rateLimit.allowed) {
     return NextResponse.json(
-      { error: "Zu viele Anmeldeversuche. Bitte warte einen Moment." },
       {
-        status: 429,
+        error: rateLimit.unavailable
+          ? "Die Anmeldung ist vorübergehend nicht verfügbar."
+          : "Zu viele Anmeldeversuche. Bitte warte einen Moment.",
+      },
+      {
+        status: rateLimit.unavailable ? 503 : 429,
         headers: { "Retry-After": String(rateLimit.retryAfter) },
       },
     );
   }
-
-  let body: LoginBody;
-  try {
-    body = (await request.json()) as LoginBody;
-  } catch {
-    return NextResponse.json(
-      { error: "Ungültige Anmeldedaten." },
-      { status: 400 },
-    );
-  }
-
-  const email = body.email?.trim().toLowerCase();
-  const password = body.password;
-  if (!email || !password) {
-    return NextResponse.json(
-      { error: "E-Mail-Adresse und Passwort sind erforderlich." },
-      { status: 400 },
-    );
-  }
+  const { email, password } = parsed.data;
 
   let supabase;
   try {

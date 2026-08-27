@@ -122,6 +122,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={styles.shell}>
+      <a className={styles.skipLink} href="#main-content">
+        Zum Inhalt springen
+      </a>
       <header className={styles.mobileBar}>
         <Brand />
         <button
@@ -156,7 +159,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <Icon aria-hidden="true" />
                   <span>{item.label}</span>
                   {item.href === "/exam-activity" && violationCount ? (
-                    <span className={styles.navBadge}>{violationCount}</span>
+                    <span
+                      aria-label={`${violationCount} Prüfungswarnungen`}
+                      className={styles.navBadge}
+                    >
+                      {violationCount}
+                    </span>
                   ) : null}
                 </Link>
               </div>
@@ -164,7 +172,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className={styles.profile}>
-          <span className={styles.avatar}>W</span>
+          <span aria-hidden="true" className={styles.avatar}>W</span>
           <span className={styles.profileCopy}>
             <strong>Werner Hutter</strong>
             <small>Administrator</small>
@@ -191,7 +199,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         />
       ) : null}
 
-      <main className={styles.main}>
+      <main className={styles.main} id="main-content" tabIndex={-1}>
         {dataUnavailable ? (
           <div
             className={styles.dataNotice}
@@ -211,7 +219,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </main>
 
       {toast ? (
-        <div className={styles.toast} role="status">
+        <div aria-atomic="true" aria-live="polite" className={styles.toast} role="status">
           {toast}
         </div>
       ) : null}

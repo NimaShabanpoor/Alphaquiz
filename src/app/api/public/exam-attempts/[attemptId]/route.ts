@@ -15,6 +15,10 @@ import {
   recordViolation,
   validateExamResponse,
 } from "@/lib/public-exam-service";
+import { z } from "zod";
+import { trustedMutationOrigin } from "@/lib/app-origin";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { readJsonBody, RequestBodyError } from "@/lib/request-body";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -23,12 +27,25 @@ type RouteContext = {
   params: Promise<{ attemptId: string }>;
 };
 
-type UpdateBody = {
-  currentQuestion?: number;
-  questionId?: string;
-  response?: string[];
-  eventType?: "tab-hidden" | "fullscreen-exit";
-};
+const updateSchema = z
+  .object({
+    currentQuestion: z.number().int().min(0).max(100_000).optional(),
+    questionId: z.string().trim().min(1).max(200).optional(),
+    response: z.array(z.string().max(5_000)).max(500).optional(),
+    eventType: z.enum(["tab-hidden", "fullscreen-exit"]).optional(),
+  })
+  .strict()
+  .refine(
+    (body) =>
+      body.currentQuestion !== undefined ||
+      body.questionId !== undefined ||
+      body.eventType !== undefined,
+    "Die Aktualisierung ist leer.",
+  )
+  .refine(
+    (body) => !body.eventType || (!body.questionId && body.response === undefined),
+    "Ein Regelverstoss darf keine Antwort enthalten.",
+  );
 
 async function authorizeAttempt(request: Request, attemptId: string) {
   const supabase = getSupabaseAdmin();
@@ -97,8 +114,48 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  if (!trustedMutationOrigin(request)) {
+    return Response.json(
+      { error: "Diese Anfrage stammt nicht von AlphaQuiz." },
+      { status: 403 },
+    );
+  }
+
+  let parsed;
+  try {
+    parsed = updateSchema.safeParse(await readJsonBody(request));
+  } catch (error) {
+    const status = error instanceof RequestBodyError ? error.status : 400;
+    return Response.json({ error: "Ungültige Prüfungsdaten." }, { status });
+  }
+  if (!parsed.success) {
+    return Response.json(
+      { error: "Die Prüfungsaktualisierung ist ungültig." },
+      { status: 400 },
+    );
+  }
+
   try {
     const { attemptId } = await context.params;
+    const rateLimit = await checkRateLimit(
+      request,
+      `exam-attempt:${attemptId}`,
+      600,
+      15 * 60_000,
+    );
+    if (!rateLimit.allowed) {
+      return Response.json(
+        {
+          error: rateLimit.unavailable
+            ? "Die Prüfung kann vorübergehend nicht gespeichert werden."
+            : "Zu viele Aktualisierungen. Bitte warte einen Moment.",
+        },
+        {
+          status: rateLimit.unavailable ? 503 : 429,
+          headers: { "Retry-After": String(rateLimit.retryAfter) },
+        },
+      );
+    }
     const authorized = await authorizeAttempt(request, attemptId);
     if ("error" in authorized) {
       return Response.json(
@@ -116,7 +173,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       });
     }
 
-    const body = (await request.json()) as UpdateBody;
+    const body = parsed.data;
     let updatedAttempt = authorized.attempt;
 
     if (body.eventType) {
@@ -203,8 +260,34 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  if (!trustedMutationOrigin(request)) {
+    return Response.json(
+      { error: "Diese Anfrage stammt nicht von AlphaQuiz." },
+      { status: 403 },
+    );
+  }
+
   try {
     const { attemptId } = await context.params;
+    const rateLimit = await checkRateLimit(
+      request,
+      `exam-submit:${attemptId}`,
+      20,
+      15 * 60_000,
+    );
+    if (!rateLimit.allowed) {
+      return Response.json(
+        {
+          error: rateLimit.unavailable
+            ? "Die Abgabe ist vorübergehend nicht verfügbar."
+            : "Zu viele Abgabeversuche. Bitte warte einen Moment.",
+        },
+        {
+          status: rateLimit.unavailable ? 503 : 429,
+          headers: { "Retry-After": String(rateLimit.retryAfter) },
+        },
+      );
+    }
     const authorized = await authorizeAttempt(request, attemptId);
     if ("error" in authorized) {
       return Response.json(

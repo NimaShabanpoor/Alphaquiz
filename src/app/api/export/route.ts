@@ -8,19 +8,25 @@ import {
   TextRun,
 } from "docx";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { z } from "zod";
 import type { Question, Quiz } from "@/lib/quiz-types";
 import { questionTypeLabels } from "@/lib/quiz-types";
 import { requireAdmin } from "@/lib/admin-auth";
+import { questionSchema, quizSchema } from "@/lib/admin-resource-schemas";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { readJsonBody, RequestBodyError } from "@/lib/request-body";
 
 export const runtime = "nodejs";
 
 type ExportFormat = "docx" | "pdf" | "csv" | "json";
 
-type ExportPayload = {
-  quiz: Quiz;
-  questions: Question[];
-  format: ExportFormat;
-};
+const exportPayloadSchema = z
+  .object({
+    quiz: quizSchema,
+    questions: z.array(questionSchema).max(2_000),
+    format: z.enum(["docx", "pdf", "csv", "json"]),
+  })
+  .strict();
 
 function decodeImage(dataUrl?: string) {
   const match = dataUrl?.match(
@@ -48,7 +54,11 @@ function safeName(title: string) {
 }
 
 function quoteCsv(value: unknown) {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+  let serialized = String(value ?? "");
+  if (typeof value === "string" && /^[\t\r\n]*[=+\-@]/.test(serialized)) {
+    serialized = `'${serialized}`;
+  }
+  return `"${serialized.replace(/"/g, '""')}"`;
 }
 
 async function createDocx(quiz: Quiz, questions: Question[]) {
@@ -253,18 +263,51 @@ function createCsv(quiz: Quiz, questions: Question[]) {
 }
 
 export async function POST(request: Request) {
+  let parsed;
+  try {
+    parsed = exportPayloadSchema.safeParse(
+      await readJsonBody(request, 30 * 1024 * 1024),
+    );
+  } catch (error) {
+    if (error instanceof RequestBodyError) {
+      return Response.json({ error: error.message }, { status: error.status });
+    }
+    return Response.json(
+      { error: "Die Exportdaten sind ungültig." },
+      { status: 400 },
+    );
+  }
+  if (!parsed.success) {
+    return Response.json(
+      { error: "Die Exportdaten sind unvollständig oder ungültig." },
+      { status: 400 },
+    );
+  }
+
   const auth = await requireAdmin(request);
   if (auth.response) return auth.response;
 
+  const rateLimit = await checkRateLimit(request, "admin-export", 30, 15 * 60_000);
+  if (!rateLimit.allowed) {
+    return Response.json(
+      {
+        error: rateLimit.unavailable
+          ? "Der Export ist vorübergehend nicht verfügbar."
+          : "Zu viele Exporte. Bitte warte einen Moment.",
+      },
+      {
+        status: rateLimit.unavailable ? 503 : 429,
+        headers: { "Retry-After": String(rateLimit.retryAfter) },
+      },
+    );
+  }
+
   try {
-    const payload = (await request.json()) as ExportPayload;
-    const { quiz, questions, format } = payload;
-    if (!quiz || !Array.isArray(questions)) {
-      return Response.json(
-        { error: "Quizdaten fehlen oder sind ungültig." },
-        { status: 400 },
-      );
-    }
+    const { quiz, questions, format } = parsed.data as {
+      quiz: Quiz;
+      questions: Question[];
+      format: ExportFormat;
+    };
 
     let buffer: Buffer;
     let contentType: string;
@@ -296,6 +339,7 @@ export async function POST(request: Request) {
       headers: {
         "Content-Disposition": `attachment; filename="${safeName(quiz.title)}.${format}"`,
         "Content-Type": contentType,
+        "Cache-Control": "private, no-store",
       },
     });
   } catch {

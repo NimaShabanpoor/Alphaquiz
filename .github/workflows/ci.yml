@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci-placeholder
+      APP_ORIGIN: https://example.invalid
+      ADMIN_EMAIL: admin@example.invalid
+      RATE_LIMIT_SECRET: ci-only-secret-that-is-longer-than-32-characters
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
