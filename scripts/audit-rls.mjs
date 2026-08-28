@@ -80,7 +80,11 @@ const client = new Client({
       }
     : { connectionString }),
   connectionTimeoutMillis: 15_000,
-  ssl: { rejectUnauthorized: false },
+  ssl: ["localhost", "127.0.0.1", "::1"].includes(
+    (poolerHost || directUrl.hostname).toLowerCase(),
+  )
+    ? false
+    : { rejectUnauthorized: false },
 });
 
 try {

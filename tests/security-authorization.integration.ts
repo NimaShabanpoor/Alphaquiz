@@ -43,7 +43,12 @@ let userBId = "";
 let fileEnvironment: Record<string, string> = {};
 
 function readEnvironmentFile() {
-  const source = readFileSync(resolve(projectRoot, ".env"), "utf8");
+  let source = "";
+  try {
+    source = readFileSync(resolve(projectRoot, ".env"), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
   return Object.fromEntries(
     source
       .split(/\r?\n/)
@@ -62,7 +67,8 @@ function readEnvironmentFile() {
 }
 
 function requiredEnvironment(name: string) {
-  const value = fileEnvironment[name]?.trim();
+  const value = (process.env[name]?.trim() || fileEnvironment[name]?.trim())
+    ?.replace(/^["']|["']$/g, "");
   assert.ok(value, `${name} muss für die Autorisierungsprüfung gesetzt sein.`);
   return value;
 }
