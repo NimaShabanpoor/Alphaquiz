@@ -36,6 +36,7 @@ const baseUrl = `http://127.0.0.1:${port}`;
 let appProcess: ChildProcess | undefined;
 let serviceClient: SupabaseClient;
 let userBClient: SupabaseClient;
+let anonClient: SupabaseClient;
 let adminCookie = "";
 let userBCookie = "";
 let adminUserId = "";
@@ -300,6 +301,9 @@ before(async () => {
   adminCookie = adminSession.cookie;
   userBCookie = userBSession.cookie;
   userBClient = userClient(userBSession.token);
+  anonClient = createClient(supabaseUrl, publishableKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   assert.ok(publishableKey);
 
   await insertFixture("categories", {
@@ -632,6 +636,39 @@ test("c) Nutzer B kann quiz_questions nicht über fremde Parents einfügen", asy
   assert.ok(error);
 });
 
+test("c) Nutzer B kann topics nicht über eine fremde Kategorie einfügen", async () => {
+  const { error } = await userBClient.from("topics").insert({
+    id: `security-topic-b-${runId}`,
+    categoryId: ids.category,
+    name: "Injected topic",
+  });
+  assert.ok(error);
+});
+
+test("c) Nutzer B kann exam_publications nicht über ein fremdes Quiz einfügen", async () => {
+  const { error } = await userBClient.from("exam_publications").insert({
+    id: `security-publication-b-${runId}`,
+    quizId: ids.quiz,
+    slug: `security-publication-b-${runId}`,
+    mode: "closed",
+    timeLimit: 45,
+    maxViolations: 1,
+    active: true,
+    sendResults: false,
+    randomization: {
+      questionOrderMode: "fixed",
+      useTopics: true,
+      questionCountByTopic: {},
+      shuffleAnswers: false,
+      requiredQuestionIds: [],
+      lockedQuestionIds: [],
+      retryMode: "regenerate",
+    },
+    createdAt: new Date().toISOString(),
+  });
+  assert.ok(error);
+});
+
 test("c) Nutzer B kann fremde quiz_questions nicht ändern", async () => {
   await assertForeignUpdateDenied(
     "quiz_questions",
@@ -681,6 +718,37 @@ test("d) user_id-Spoofing erzeugt keine Ressource für Nutzer B", async () => {
   assert.ifError(error);
   assert.notEqual(data?.user_id, userBId);
   if (data) assert.equal(data.user_id, adminUserId);
+});
+
+test("anon kann public-Tabellen nicht lesen", async () => {
+  const { error } = await anonClient.from("categories").select("id").limit(1);
+  assert.ok(error);
+});
+
+test("anon kann nicht in public-Tabellen einfügen", async () => {
+  const { error } = await anonClient.from("categories").insert({
+    id: `security-anon-category-${runId}`,
+    user_id: adminUserId,
+    name: "Anon category",
+    color: "#123456",
+  });
+  assert.ok(error);
+});
+
+test("anon kann public-Tabellen nicht ändern", async () => {
+  const { error } = await anonClient
+    .from("categories")
+    .update({ name: "Anon hacked" })
+    .eq("id", ids.category);
+  assert.ok(error);
+});
+
+test("anon kann aus public-Tabellen nicht löschen", async () => {
+  const { error } = await anonClient
+    .from("categories")
+    .delete()
+    .eq("id", ids.category);
+  assert.ok(error);
 });
 
 for (const [name, path, method, body] of unauthenticatedEndpoints) {
@@ -748,6 +816,30 @@ test("g) ein Prüfungsversuch ohne Token liefert keine Prüfungsdaten", async ()
   await assertNoDataResponse(response, 401);
 });
 
+test("g) PATCH speichert ohne Prüfungstoken keine Antworten", async () => {
+  const response = await request(`/api/public/exam-attempts/${ids.attempt}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ currentQuestion: 0 }),
+  });
+  await assertNoDataResponse(response, 401);
+});
+
+test("g) PATCH speichert mit einem fremden Prüfungstoken keine Antworten", async () => {
+  const first = await startPublicAttempt();
+  const second = await startPublicAttempt();
+  const response = await request(
+    `/api/public/exam-attempts/${second.attemptId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentQuestion: 0 }),
+    },
+    first.cookie,
+  );
+  await assertNoDataResponse(response, 401);
+});
+
 test("g) ein Token einer fremden Prüfung kann kein Ergebnis einreichen", async () => {
   const first = await startPublicAttempt();
   const second = await startPublicAttempt();
@@ -790,6 +882,51 @@ test("g) ein bereits benutzter Prüfungstoken wird abgelehnt", async () => {
     attempt.cookie,
   );
   assert.ok([401, 403].includes(second.status));
+});
+
+test("Cross-Site-Logout wird abgelehnt", async () => {
+  const response = await fetch(`${baseUrl}/api/auth/logout`, {
+    method: "POST",
+    headers: {
+      Cookie: adminCookie,
+      Origin: "https://attacker.example",
+    },
+  });
+  await assertNoDataResponse(response, 403);
+});
+
+test("gültiger Nicht-Admin-Login endet im 403-Pfad", async () => {
+  const response = await request("/api/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-vercel-forwarded-for": "198.51.100.241",
+    },
+    body: JSON.stringify({ email: userBEmail, password }),
+  });
+  await assertForbiddenAdminResponse(response);
+});
+
+test("Passwort-Reset antwortet für nicht freigegebene Konten generisch", async () => {
+  const expected = {
+    message: "Wenn das Konto existiert, wurde eine Rücksetz-Mail versendet.",
+  };
+  const responses = await Promise.all(
+    [userBEmail, `missing-${runId}@example.invalid`].map((email, index) =>
+      request("/api/auth/reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-vercel-forwarded-for": `203.0.113.${240 + index}`,
+        },
+        body: JSON.stringify({ email }),
+      }),
+    ),
+  );
+  for (const response of responses) {
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), expected);
+  }
 });
 
 test("h) Zod lehnt ein unbekanntes Zusatzfeld mit 400 ab", async () => {
