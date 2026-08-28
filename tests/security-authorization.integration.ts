@@ -195,6 +195,14 @@ async function assertNoDataResponse(response: Response, status: number) {
   assert.deepEqual(Object.keys(body), ["error"]);
 }
 
+async function assertForbiddenAdminResponse(response: Response) {
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), {
+    error:
+      "Dieses Konto ist nicht als AlphaQuiz-Administrator freigeschaltet.",
+  });
+}
+
 async function assertServerCanReachSupabase() {
   const response = await request("/api/admin/status", {}, adminCookie);
   const body = (await response.json().catch(() => null)) as JsonObject | null;
@@ -690,14 +698,14 @@ for (const [name, path, method, body] of unauthenticatedEndpoints) {
       },
       userBCookie,
     );
-    await assertNoDataResponse(response, 403);
+    await assertForbiddenAdminResponse(response);
   });
 }
 
 for (const [name, path, init] of additionalProtectedEndpoints) {
   test(`e) Nicht-Admin erhält bei ${name} 403`, async () => {
     const response = await request(path, init(), userBCookie);
-    await assertNoDataResponse(response, 403);
+    await assertForbiddenAdminResponse(response);
   });
 }
 
