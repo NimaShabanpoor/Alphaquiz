@@ -228,6 +228,14 @@ async function assertForeignUpdateDenied(
   filter: Filter,
   update: JsonObject,
 ) {
+  const before = await serviceClient
+    .from(table)
+    .select("*")
+    .match(filter)
+    .maybeSingle();
+  assert.ifError(before.error);
+  assert.ok(before.data, `${table}: Testzeile fehlt vor dem fremden Update.`);
+
   const result = await userBClient
     .from(table)
     .update(update)
@@ -235,12 +243,44 @@ async function assertForeignUpdateDenied(
     .select("*");
   assert.ifError(result.error);
   assert.deepEqual(result.data, []);
+
+  const after = await serviceClient
+    .from(table)
+    .select("*")
+    .match(filter)
+    .maybeSingle();
+  assert.ifError(after.error);
+  assert.deepEqual(
+    after.data,
+    before.data,
+    `${table}: Das fremde Update hat die Testzeile verändert.`,
+  );
 }
 
 async function assertForeignDeleteDenied(table: string, filter: Filter) {
+  const before = await serviceClient
+    .from(table)
+    .select("*")
+    .match(filter)
+    .maybeSingle();
+  assert.ifError(before.error);
+  assert.ok(before.data, `${table}: Testzeile fehlt vor dem fremden Delete.`);
+
   const result = await userBClient.from(table).delete().match(filter).select("*");
   assert.ifError(result.error);
   assert.deepEqual(result.data, []);
+
+  const after = await serviceClient
+    .from(table)
+    .select("*")
+    .match(filter)
+    .maybeSingle();
+  assert.ifError(after.error);
+  assert.deepEqual(
+    after.data,
+    before.data,
+    `${table}: Das fremde Delete hat die Testzeile entfernt oder verändert.`,
+  );
 }
 
 async function startPublicAttempt(publicationSlug = slug) {
