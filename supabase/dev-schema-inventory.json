@@ -1,0 +1,2822 @@
+{
+  "tables": [
+    {
+      "schema": "private",
+      "name": "request_rate_limits",
+      "rls": false,
+      "force_rls": false
+    },
+    {
+      "schema": "public",
+      "name": "answers",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "schema": "public",
+      "name": "categories",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "schema": "public",
+      "name": "exam_attempts",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "schema": "public",
+      "name": "exam_events",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "schema": "public",
+      "name": "exam_instances",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "schema": "public",
+      "name": "exam_publications",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "schema": "public",
+      "name": "exports",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "schema": "public",
+      "name": "questions",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "schema": "public",
+      "name": "quiz_questions",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "schema": "public",
+      "name": "quizzes",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "schema": "public",
+      "name": "topics",
+      "rls": true,
+      "force_rls": false
+    }
+  ],
+  "columns": [
+    {
+      "schema": "private",
+      "table": "request_rate_limits",
+      "column": "key_hash",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "private",
+      "table": "request_rate_limits",
+      "column": "request_count",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "private",
+      "table": "request_rate_limits",
+      "column": "reset_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "private",
+      "table": "request_rate_limits",
+      "column": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "column": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "column": "questionId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "column": "text",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "''::text"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "column": "correct",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "column": "position",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "column": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "column": "name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "column": "color",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'#6f8785'::text"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "column": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "publicationId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "email",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'in-progress'::text"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "startedAt",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "submittedAt",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "currentQuestion",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "responses",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "score",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "possible",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "percentage",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "passed",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "topicResults",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "violationCount",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "resultEmailStatus",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'pending'::text"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "accessTokenHash",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "column": "updatedAt",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "column": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "column": "publicationId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "column": "attemptId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "column": "type",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "column": "message",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "column": "createdAt",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "attemptId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "publicationId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "quizId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "studentKey",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "questionOrder",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "topicOrder",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "answerOrderByQuestionId",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "snapshot",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "seed",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "generatedAt",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "column": "previousAttemptId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "quizId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "slug",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "mode",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'closed'::text"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "timeLimit",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "45"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "maxViolations",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "2"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "active",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "sendResults",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "createdAt",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "availableFrom",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "availableUntil",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "column": "randomization",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{\"retryMode\": \"regenerate\", \"useTopics\": true, \"shuffleAnswers\": false, \"lockedQuestionIds\": [], \"questionOrderMode\": \"fixed\", \"requiredQuestionIds\": [], \"questionCountByTopic\": {}}'::jsonb"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "column": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "column": "quizId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "column": "format",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "column": "fileName",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "column": "createdAt",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "column": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "column": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "column": "title",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "column": "description",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "''::text"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "column": "type",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "column": "categoryId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "column": "points",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "column": "shuffle",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "column": "topicId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "column": "image",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "column": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "column": "quizId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "column": "questionId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "column": "position",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "column": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "column": "title",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "column": "description",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "''::text"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "column": "categoryId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "column": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'draft'::text"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "column": "updatedAt",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "column": "passPercentage",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "70"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "column": "scoringMode",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'combined'::text"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "column": "topicPassPercentages",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "column": "hiddenTopicIds",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "column": "user_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "column": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "column": "categoryId",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "column": "name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    }
+  ],
+  "constraints": [
+    {
+      "schema": "private",
+      "table": "request_rate_limits",
+      "name": "request_rate_limits_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (key_hash)"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "name": "answers_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "name": "answers_questionId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"questionId\") REFERENCES questions(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "name": "exam_attempts_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "name": "exam_attempts_publicationId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"publicationId\") REFERENCES exam_publications(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "name": "exam_events_attemptId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"attemptId\") REFERENCES exam_attempts(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "name": "exam_events_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "name": "exam_events_publicationId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"publicationId\") REFERENCES exam_publications(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "name": "exam_instances_attemptId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"attemptId\") REFERENCES exam_attempts(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "name": "exam_instances_attemptId_key",
+      "type": "u",
+      "definition": "UNIQUE (\"attemptId\")"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "name": "exam_instances_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "name": "exam_instances_publicationId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"publicationId\") REFERENCES exam_publications(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "name": "exam_publications_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "name": "exam_publications_quizId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"quizId\") REFERENCES quizzes(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "name": "exam_publications_slug_key",
+      "type": "u",
+      "definition": "UNIQUE (slug)"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "name": "exports_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "name": "exports_quizId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"quizId\") REFERENCES quizzes(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "name": "exports_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id)"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "name": "questions_categoryId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"categoryId\") REFERENCES categories(id)"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "name": "questions_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "name": "questions_topicId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"topicId\") REFERENCES topics(id)"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "name": "questions_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id)"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "name": "quiz_questions_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (\"quizId\", \"questionId\")"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "name": "quiz_questions_questionId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"questionId\") REFERENCES questions(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "name": "quiz_questions_quizId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"quizId\") REFERENCES quizzes(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "name": "quizzes_categoryId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"categoryId\") REFERENCES categories(id)"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "name": "quizzes_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "name": "quizzes_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id)"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "name": "topics_categoryId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"categoryId\") REFERENCES categories(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "name": "topics_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    }
+  ],
+  "indexes": [
+    {
+      "schema": "private",
+      "table": "request_rate_limits",
+      "name": "request_rate_limits_pkey",
+      "definition": "CREATE UNIQUE INDEX request_rate_limits_pkey ON private.request_rate_limits USING btree (key_hash)"
+    },
+    {
+      "schema": "private",
+      "table": "request_rate_limits",
+      "name": "request_rate_limits_reset_at_idx",
+      "definition": "CREATE INDEX request_rate_limits_reset_at_idx ON private.request_rate_limits USING btree (reset_at)"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "name": "answers_pkey",
+      "definition": "CREATE UNIQUE INDEX answers_pkey ON public.answers USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "name": "answers_question_id_idx",
+      "definition": "CREATE INDEX answers_question_id_idx ON public.answers USING btree (\"questionId\")"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_pkey",
+      "definition": "CREATE UNIQUE INDEX categories_pkey ON public.categories USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_user_id_idx",
+      "definition": "CREATE INDEX categories_user_id_idx ON public.categories USING btree (user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "name": "exam_attempts_one_active_per_email",
+      "definition": "CREATE UNIQUE INDEX exam_attempts_one_active_per_email ON public.exam_attempts USING btree (\"publicationId\", lower(email)) WHERE (status <> 'reset'::text)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "name": "exam_attempts_pkey",
+      "definition": "CREATE UNIQUE INDEX exam_attempts_pkey ON public.exam_attempts USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "name": "exam_attempts_publication_started_idx",
+      "definition": "CREATE INDEX exam_attempts_publication_started_idx ON public.exam_attempts USING btree (\"publicationId\", \"startedAt\" DESC)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "name": "exam_events_attempt_created_idx",
+      "definition": "CREATE INDEX exam_events_attempt_created_idx ON public.exam_events USING btree (\"attemptId\", \"createdAt\" DESC)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "name": "exam_events_pkey",
+      "definition": "CREATE UNIQUE INDEX exam_events_pkey ON public.exam_events USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "name": "exam_events_publication_created_idx",
+      "definition": "CREATE INDEX exam_events_publication_created_idx ON public.exam_events USING btree (\"publicationId\", \"createdAt\" DESC)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "name": "exam_instances_attemptId_key",
+      "definition": "CREATE UNIQUE INDEX \"exam_instances_attemptId_key\" ON public.exam_instances USING btree (\"attemptId\")"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "name": "exam_instances_pkey",
+      "definition": "CREATE UNIQUE INDEX exam_instances_pkey ON public.exam_instances USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "name": "exam_instances_publication_id_idx",
+      "definition": "CREATE INDEX exam_instances_publication_id_idx ON public.exam_instances USING btree (\"publicationId\")"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "name": "exam_publications_pkey",
+      "definition": "CREATE UNIQUE INDEX exam_publications_pkey ON public.exam_publications USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "name": "exam_publications_quiz_id_idx",
+      "definition": "CREATE INDEX exam_publications_quiz_id_idx ON public.exam_publications USING btree (\"quizId\")"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "name": "exam_publications_slug_key",
+      "definition": "CREATE UNIQUE INDEX exam_publications_slug_key ON public.exam_publications USING btree (slug)"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "name": "exports_pkey",
+      "definition": "CREATE UNIQUE INDEX exports_pkey ON public.exports USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "name": "exports_user_id_idx",
+      "definition": "CREATE INDEX exports_user_id_idx ON public.exports USING btree (user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "name": "questions_pkey",
+      "definition": "CREATE UNIQUE INDEX questions_pkey ON public.questions USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "name": "questions_user_id_idx",
+      "definition": "CREATE INDEX questions_user_id_idx ON public.questions USING btree (user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "name": "quiz_questions_pkey",
+      "definition": "CREATE UNIQUE INDEX quiz_questions_pkey ON public.quiz_questions USING btree (\"quizId\", \"questionId\")"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "name": "quizzes_pkey",
+      "definition": "CREATE UNIQUE INDEX quizzes_pkey ON public.quizzes USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "name": "quizzes_user_id_idx",
+      "definition": "CREATE INDEX quizzes_user_id_idx ON public.quizzes USING btree (user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "name": "topics_category_id_idx",
+      "definition": "CREATE INDEX topics_category_id_idx ON public.topics USING btree (\"categoryId\")"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "name": "topics_pkey",
+      "definition": "CREATE UNIQUE INDEX topics_pkey ON public.topics USING btree (id)"
+    }
+  ],
+  "policies": [
+    {
+      "schema": "public",
+      "table": "answers",
+      "name": "answers_delete_own",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM questions question\n  WHERE ((question.id = answers.\"questionId\") AND (question.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "name": "answers_insert_own",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(EXISTS ( SELECT 1\n   FROM questions question\n  WHERE ((question.id = answers.\"questionId\") AND (question.user_id = ( SELECT auth.uid() AS uid)))))"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "name": "answers_select_own",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM questions question\n  WHERE ((question.id = answers.\"questionId\") AND (question.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "name": "answers_update_own",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM questions question\n  WHERE ((question.id = answers.\"questionId\") AND (question.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": "(EXISTS ( SELECT 1\n   FROM questions question\n  WHERE ((question.id = answers.\"questionId\") AND (question.user_id = ( SELECT auth.uid() AS uid)))))"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_delete_own",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_insert_own",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_select_own",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_update_own",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "name": "exam_attempts_delete_own",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_attempts.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "name": "exam_attempts_insert_own",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_attempts.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "name": "exam_attempts_select_own",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_attempts.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "name": "exam_attempts_update_own",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_attempts.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_attempts.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "name": "exam_events_delete_own",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_events.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "name": "exam_events_insert_own",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_events.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "name": "exam_events_select_own",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_events.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "name": "exam_events_update_own",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_events.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_events.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "name": "exam_instances_delete_own",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_instances.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "name": "exam_instances_insert_own",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_instances.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "name": "exam_instances_select_own",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_instances.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "name": "exam_instances_update_own",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_instances.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": "(EXISTS ( SELECT 1\n   FROM (exam_publications publication\n     JOIN quizzes quiz ON ((quiz.id = publication.\"quizId\")))\n  WHERE ((publication.id = exam_instances.\"publicationId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "name": "exam_publications_delete_own",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM quizzes quiz\n  WHERE ((quiz.id = exam_publications.\"quizId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "name": "exam_publications_insert_own",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(EXISTS ( SELECT 1\n   FROM quizzes quiz\n  WHERE ((quiz.id = exam_publications.\"quizId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "name": "exam_publications_select_own",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM quizzes quiz\n  WHERE ((quiz.id = exam_publications.\"quizId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "name": "exam_publications_update_own",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM quizzes quiz\n  WHERE ((quiz.id = exam_publications.\"quizId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": "(EXISTS ( SELECT 1\n   FROM quizzes quiz\n  WHERE ((quiz.id = exam_publications.\"quizId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid)))))"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "name": "exports_delete_own",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "name": "exports_insert_own",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "name": "exports_select_own",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "name": "exports_update_own",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "name": "questions_delete_own",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "name": "questions_insert_own",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "name": "questions_select_own",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "name": "questions_update_own",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "name": "quiz_questions_delete_own",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "((EXISTS ( SELECT 1\n   FROM quizzes quiz\n  WHERE ((quiz.id = quiz_questions.\"quizId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid))))) AND (EXISTS ( SELECT 1\n   FROM questions question\n  WHERE ((question.id = quiz_questions.\"questionId\") AND (question.user_id = ( SELECT auth.uid() AS uid))))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "name": "quiz_questions_insert_own",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((EXISTS ( SELECT 1\n   FROM quizzes quiz\n  WHERE ((quiz.id = quiz_questions.\"quizId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid))))) AND (EXISTS ( SELECT 1\n   FROM questions question\n  WHERE ((question.id = quiz_questions.\"questionId\") AND (question.user_id = ( SELECT auth.uid() AS uid))))))"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "name": "quiz_questions_select_own",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "((EXISTS ( SELECT 1\n   FROM quizzes quiz\n  WHERE ((quiz.id = quiz_questions.\"quizId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid))))) AND (EXISTS ( SELECT 1\n   FROM questions question\n  WHERE ((question.id = quiz_questions.\"questionId\") AND (question.user_id = ( SELECT auth.uid() AS uid))))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "name": "quiz_questions_update_own",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "((EXISTS ( SELECT 1\n   FROM quizzes quiz\n  WHERE ((quiz.id = quiz_questions.\"quizId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid))))) AND (EXISTS ( SELECT 1\n   FROM questions question\n  WHERE ((question.id = quiz_questions.\"questionId\") AND (question.user_id = ( SELECT auth.uid() AS uid))))))",
+      "with_check": "((EXISTS ( SELECT 1\n   FROM quizzes quiz\n  WHERE ((quiz.id = quiz_questions.\"quizId\") AND (quiz.user_id = ( SELECT auth.uid() AS uid))))) AND (EXISTS ( SELECT 1\n   FROM questions question\n  WHERE ((question.id = quiz_questions.\"questionId\") AND (question.user_id = ( SELECT auth.uid() AS uid))))))"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "name": "quizzes_delete_own",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "name": "quizzes_insert_own",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "name": "quizzes_select_own",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "name": "quizzes_update_own",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "name": "topics_delete_own",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM categories category\n  WHERE ((category.id = topics.\"categoryId\") AND (category.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "name": "topics_insert_own",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(EXISTS ( SELECT 1\n   FROM categories category\n  WHERE ((category.id = topics.\"categoryId\") AND (category.user_id = ( SELECT auth.uid() AS uid)))))"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "name": "topics_select_own",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM categories category\n  WHERE ((category.id = topics.\"categoryId\") AND (category.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "name": "topics_update_own",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM categories category\n  WHERE ((category.id = topics.\"categoryId\") AND (category.user_id = ( SELECT auth.uid() AS uid)))))",
+      "with_check": "(EXISTS ( SELECT 1\n   FROM categories category\n  WHERE ((category.id = topics.\"categoryId\") AND (category.user_id = ( SELECT auth.uid() AS uid)))))"
+    }
+  ],
+  "tableGrants": [
+    {
+      "schema": "public",
+      "table": "answers",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "table": "answers",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_attempts",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_events",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_instances",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "table": "exam_publications",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "table": "exports",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "table": "questions",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "table": "quiz_questions",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "table": "quizzes",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "table": "topics",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    }
+  ],
+  "routineGrants": [
+    {
+      "schema": "public",
+      "routine": "consume_rate_limit",
+      "grantee": "anon",
+      "privilege_type": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "routine": "consume_rate_limit",
+      "grantee": "authenticated",
+      "privilege_type": "EXECUTE"
+    }
+  ],
+  "schemaGrants": [
+    {
+      "schema": "public",
+      "grantee": "anon",
+      "privilege_type": "USAGE"
+    },
+    {
+      "schema": "public",
+      "grantee": "authenticated",
+      "privilege_type": "USAGE"
+    },
+    {
+      "schema": "public",
+      "grantee": "service_role",
+      "privilege_type": "USAGE"
+    }
+  ],
+  "defaultPrivileges": [
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "MAINTAIN"
+    },
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "MAINTAIN"
+    },
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "MAINTAIN"
+    },
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "owner": "postgres",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "function",
+      "grantee": "anon",
+      "privilege_type": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "function",
+      "grantee": "authenticated",
+      "privilege_type": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "function",
+      "grantee": "service_role",
+      "privilege_type": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "sequence",
+      "grantee": "anon",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "sequence",
+      "grantee": "anon",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "sequence",
+      "grantee": "anon",
+      "privilege_type": "USAGE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "sequence",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "sequence",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "sequence",
+      "grantee": "authenticated",
+      "privilege_type": "USAGE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "sequence",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "sequence",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "sequence",
+      "grantee": "service_role",
+      "privilege_type": "USAGE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "MAINTAIN"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "anon",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "MAINTAIN"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "authenticated",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "DELETE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "INSERT"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "MAINTAIN"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "SELECT"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "schema": "public",
+      "owner": "supabase_admin",
+      "object_type": "table",
+      "grantee": "service_role",
+      "privilege_type": "UPDATE"
+    }
+  ],
+  "functions": [
+    {
+      "schema": "public",
+      "name": "consume_rate_limit",
+      "arguments": "p_key_hash text, p_limit integer, p_window_seconds integer",
+      "result": "TABLE(allowed boolean, retry_after integer)",
+      "security_definer": true,
+      "configuration": [
+        "search_path=private, pg_temp"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.consume_rate_limit(p_key_hash text, p_limit integer, p_window_seconds integer)\n RETURNS TABLE(allowed boolean, retry_after integer)\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'private', 'pg_temp'\nAS $function$\ndeclare\n  current_count integer;\n  current_reset timestamptz;\n  current_timestamp_value timestamptz := clock_timestamp();\nbegin\n  if p_key_hash !~ '^[0-9a-f]{64}$'\n    or p_limit < 1\n    or p_window_seconds < 1\n    or p_window_seconds > 604800 then\n    raise exception 'invalid rate limit arguments';\n  end if;\n\n  delete from private.request_rate_limits\n  where key_hash in (\n    select key_hash\n    from private.request_rate_limits\n    where reset_at < current_timestamp_value - interval '1 day'\n    order by reset_at\n    limit 100\n  );\n\n  insert into private.request_rate_limits as rate_limit (\n    key_hash,\n    request_count,\n    reset_at,\n    updated_at\n  )\n  values (\n    p_key_hash,\n    1,\n    current_timestamp_value + make_interval(secs => p_window_seconds),\n    current_timestamp_value\n  )\n  on conflict (key_hash) do update\n  set\n    request_count = case\n      when rate_limit.reset_at <= current_timestamp_value then 1\n      else least(rate_limit.request_count + 1, p_limit + 1)\n    end,\n    reset_at = case\n      when rate_limit.reset_at <= current_timestamp_value\n        then current_timestamp_value + make_interval(secs => p_window_seconds)\n      else rate_limit.reset_at\n    end,\n    updated_at = current_timestamp_value\n  returning request_count, reset_at\n  into current_count, current_reset;\n\n  allowed := current_count <= p_limit;\n  retry_after := case\n    when allowed then 0\n    else greatest(1, ceil(extract(epoch from current_reset - current_timestamp_value))::integer)\n  end;\n  return next;\nend;\n$function$\n"
+    }
+  ]
+}

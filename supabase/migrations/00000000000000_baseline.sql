@@ -10,6 +10,7 @@ revoke all on schema private from public, anon, authenticated;
 alter default privileges in schema public revoke all on tables from anon;
 alter default privileges in schema public revoke all on sequences from anon;
 alter default privileges in schema public revoke all on functions from anon;
+alter default privileges in schema public revoke all on functions from public;
 
 create table "private"."request_rate_limits" (
   "key_hash" text not null,
@@ -147,17 +148,47 @@ alter table "private"."request_rate_limits"
 alter table "public"."answers"
   add constraint "answers_pkey" PRIMARY KEY (id);
 
+alter table "public"."categories"
+  add constraint "categories_pkey" PRIMARY KEY (id);
+
+alter table "public"."exam_attempts"
+  add constraint "exam_attempts_pkey" PRIMARY KEY (id);
+
+alter table "public"."exam_events"
+  add constraint "exam_events_pkey" PRIMARY KEY (id);
+
+alter table "public"."exam_instances"
+  add constraint "exam_instances_attemptId_key" UNIQUE ("attemptId");
+
+alter table "public"."exam_instances"
+  add constraint "exam_instances_pkey" PRIMARY KEY (id);
+
+alter table "public"."exam_publications"
+  add constraint "exam_publications_pkey" PRIMARY KEY (id);
+
+alter table "public"."exam_publications"
+  add constraint "exam_publications_slug_key" UNIQUE (slug);
+
+alter table "public"."exports"
+  add constraint "exports_pkey" PRIMARY KEY (id);
+
+alter table "public"."questions"
+  add constraint "questions_pkey" PRIMARY KEY (id);
+
+alter table "public"."quiz_questions"
+  add constraint "quiz_questions_pkey" PRIMARY KEY ("quizId", "questionId");
+
+alter table "public"."quizzes"
+  add constraint "quizzes_pkey" PRIMARY KEY (id);
+
+alter table "public"."topics"
+  add constraint "topics_pkey" PRIMARY KEY (id);
+
 alter table "public"."answers"
   add constraint "answers_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES questions(id) ON DELETE CASCADE;
 
 alter table "public"."categories"
-  add constraint "categories_pkey" PRIMARY KEY (id);
-
-alter table "public"."categories"
   add constraint "categories_user_id_fkey" FOREIGN KEY (user_id) REFERENCES auth.users(id);
-
-alter table "public"."exam_attempts"
-  add constraint "exam_attempts_pkey" PRIMARY KEY (id);
 
 alter table "public"."exam_attempts"
   add constraint "exam_attempts_publicationId_fkey" FOREIGN KEY ("publicationId") REFERENCES exam_publications(id) ON DELETE CASCADE;
@@ -166,34 +197,16 @@ alter table "public"."exam_events"
   add constraint "exam_events_attemptId_fkey" FOREIGN KEY ("attemptId") REFERENCES exam_attempts(id) ON DELETE CASCADE;
 
 alter table "public"."exam_events"
-  add constraint "exam_events_pkey" PRIMARY KEY (id);
-
-alter table "public"."exam_events"
   add constraint "exam_events_publicationId_fkey" FOREIGN KEY ("publicationId") REFERENCES exam_publications(id) ON DELETE CASCADE;
 
 alter table "public"."exam_instances"
   add constraint "exam_instances_attemptId_fkey" FOREIGN KEY ("attemptId") REFERENCES exam_attempts(id) ON DELETE CASCADE;
 
 alter table "public"."exam_instances"
-  add constraint "exam_instances_attemptId_key" UNIQUE ("attemptId");
-
-alter table "public"."exam_instances"
-  add constraint "exam_instances_pkey" PRIMARY KEY (id);
-
-alter table "public"."exam_instances"
   add constraint "exam_instances_publicationId_fkey" FOREIGN KEY ("publicationId") REFERENCES exam_publications(id) ON DELETE CASCADE;
 
 alter table "public"."exam_publications"
-  add constraint "exam_publications_pkey" PRIMARY KEY (id);
-
-alter table "public"."exam_publications"
   add constraint "exam_publications_quizId_fkey" FOREIGN KEY ("quizId") REFERENCES quizzes(id) ON DELETE CASCADE;
-
-alter table "public"."exam_publications"
-  add constraint "exam_publications_slug_key" UNIQUE (slug);
-
-alter table "public"."exports"
-  add constraint "exports_pkey" PRIMARY KEY (id);
 
 alter table "public"."exports"
   add constraint "exports_quizId_fkey" FOREIGN KEY ("quizId") REFERENCES quizzes(id) ON DELETE CASCADE;
@@ -205,16 +218,10 @@ alter table "public"."questions"
   add constraint "questions_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES categories(id);
 
 alter table "public"."questions"
-  add constraint "questions_pkey" PRIMARY KEY (id);
-
-alter table "public"."questions"
   add constraint "questions_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES topics(id);
 
 alter table "public"."questions"
   add constraint "questions_user_id_fkey" FOREIGN KEY (user_id) REFERENCES auth.users(id);
-
-alter table "public"."quiz_questions"
-  add constraint "quiz_questions_pkey" PRIMARY KEY ("quizId", "questionId");
 
 alter table "public"."quiz_questions"
   add constraint "quiz_questions_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES questions(id) ON DELETE CASCADE;
@@ -226,16 +233,10 @@ alter table "public"."quizzes"
   add constraint "quizzes_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES categories(id);
 
 alter table "public"."quizzes"
-  add constraint "quizzes_pkey" PRIMARY KEY (id);
-
-alter table "public"."quizzes"
   add constraint "quizzes_user_id_fkey" FOREIGN KEY (user_id) REFERENCES auth.users(id);
 
 alter table "public"."topics"
   add constraint "topics_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES categories(id) ON DELETE CASCADE;
-
-alter table "public"."topics"
-  add constraint "topics_pkey" PRIMARY KEY (id);
 
 CREATE INDEX request_rate_limits_reset_at_idx ON private.request_rate_limits USING btree (reset_at);
 
@@ -750,11 +751,11 @@ begin
   end;
   return next;
 end;
-$function$
+$function$;
 
 revoke all on all tables in schema public from anon, authenticated;
 revoke all on all tables in schema private from anon, authenticated;
-grant usage on schema public to authenticated;
+grant usage on schema public to anon, authenticated, service_role;
 
 grant delete, insert, select, update on table "public"."answers" to "authenticated";
 grant delete, insert, references, select, trigger, truncate, update on table "public"."answers" to "service_role";

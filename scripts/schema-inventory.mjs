@@ -66,15 +66,53 @@ export async function collectSchemaInventory(client) {
       select table_schema as schema, table_name as table, grantee, privilege_type
       from information_schema.role_table_grants
       where table_schema in ('public', 'private')
-        and grantee in ('anon', 'authenticated')
+        and grantee in ('anon', 'authenticated', 'service_role')
       order by table_schema, table_name, grantee, privilege_type
     `,
     routineGrants: `
       select routine_schema as schema, routine_name as routine, grantee, privilege_type
       from information_schema.role_routine_grants
       where routine_schema in ('public', 'private')
-        and grantee in ('anon', 'authenticated')
+        and grantee in ('anon', 'authenticated', 'service_role')
       order by routine_schema, routine_name, grantee, privilege_type
+    `,
+    schemaGrants: `
+      select namespace.nspname as schema, role_definition.rolname as grantee,
+        privilege.privilege_type
+      from pg_namespace as namespace
+      cross join lateral aclexplode(
+        coalesce(namespace.nspacl, acldefault('n', namespace.nspowner))
+      ) as privilege
+      join pg_roles as role_definition on role_definition.oid = privilege.grantee
+      where namespace.nspname in ('public', 'private')
+        and role_definition.rolname in ('anon', 'authenticated', 'service_role')
+      order by namespace.nspname, role_definition.rolname, privilege.privilege_type
+    `,
+    defaultPrivileges: `
+      select
+        namespace.nspname as schema,
+        owner_role.rolname as owner,
+        case default_acl.defaclobjtype
+          when 'r' then 'table'
+          when 'S' then 'sequence'
+          when 'f' then 'function'
+          when 'T' then 'type'
+          when 'n' then 'schema'
+          else default_acl.defaclobjtype::text
+        end as object_type,
+        coalesce(grantee_role.rolname, 'PUBLIC') as grantee,
+        privilege.privilege_type
+      from pg_default_acl as default_acl
+      join pg_namespace as namespace on namespace.oid = default_acl.defaclnamespace
+      join pg_roles as owner_role on owner_role.oid = default_acl.defaclrole
+      cross join lateral aclexplode(default_acl.defaclacl) as privilege
+      left join pg_roles as grantee_role on grantee_role.oid = privilege.grantee
+      where namespace.nspname in ('public', 'private')
+        and coalesce(grantee_role.rolname, 'PUBLIC') in (
+          'anon', 'authenticated', 'service_role', 'PUBLIC'
+        )
+      order by namespace.nspname, owner_role.rolname, object_type,
+        grantee, privilege.privilege_type
     `,
     functions: `
       select
@@ -83,7 +121,8 @@ export async function collectSchemaInventory(client) {
         pg_get_function_identity_arguments(procedure.oid) as arguments,
         pg_get_function_result(procedure.oid) as result,
         procedure.prosecdef as security_definer,
-        procedure.proconfig as configuration
+        procedure.proconfig as configuration,
+        pg_get_functiondef(procedure.oid) as definition
       from pg_proc as procedure
       join pg_namespace as namespace on namespace.oid = procedure.pronamespace
       where namespace.nspname in ('public', 'private')
@@ -97,6 +136,16 @@ export async function collectSchemaInventory(client) {
     inventory[name] = (await client.query(query)).rows;
   }
   return inventory;
+}
+
+export function withoutSupabasePlatformObjects(inventory) {
+  return {
+    ...inventory,
+    functions: inventory.functions.filter(
+      (entry) =>
+        !(entry.schema === "public" && entry.name === "rls_auto_enable"),
+    ),
+  };
 }
 
 export async function writeSchemaInventory(path, inventory) {
@@ -162,7 +211,9 @@ if (fileURLToPath(import.meta.url) === resolve(process.argv[1] ?? "")) {
   });
   try {
     await client.connect();
-    const inventory = await collectSchemaInventory(client);
+    const inventory = withoutSupabasePlatformObjects(
+      await collectSchemaInventory(client),
+    );
     printSchemaInventorySummary(inventory);
     if (outputPath) await writeSchemaInventory(outputPath, inventory);
     else console.log(JSON.stringify(inventory, null, 2));
