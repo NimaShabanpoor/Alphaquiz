@@ -1058,3 +1058,24 @@ test("j) eine als MDB umbenannte Fremddatei wird per Signatur abgelehnt", async 
   );
   assert.equal(response.status, 415);
 });
+
+test("deleteMissingIds: ein leeres Array löscht alle eigenen Exporte", async () => {
+  const response = await request(
+    "/api/admin/exports",
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ exports: [] }),
+    },
+    adminCookie,
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { saved: true });
+
+  const { data, error } = await serviceClient
+    .from("exports")
+    .select("id")
+    .eq("user_id", adminUserId);
+  assert.ifError(error);
+  assert.deepEqual(data, []);
+});
