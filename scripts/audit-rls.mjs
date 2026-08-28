@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 
 const operations = ["select", "insert", "update", "delete"];
@@ -52,16 +53,31 @@ function usesDirectAuthUid(expression) {
   return false;
 }
 
+function isUnrestrictedUsing(expression) {
+  return expression.toLowerCase().replace(/[\s()]/g, "") === "true";
+}
+
 const projectRoot = resolve(import.meta.dirname, "..");
 const envSource = await readFile(resolve(projectRoot, ".env"), "utf8").catch(
   () => "",
 );
 const connectionString = configuredValue(envSource, "SUPABASE_URL");
 const poolerHost = configuredValue(envSource, "SUPABASE_POOLER_HOST");
+const apiUrl = configuredValue(envSource, "NEXT_PUBLIC_SUPABASE_URL");
+const anonKey = configuredValue(
+  envSource,
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+);
 
 if (!connectionString.startsWith("postgres")) {
   throw new Error(
     "SUPABASE_URL muss eine PostgreSQL-Verbindungsadresse enthalten.",
+  );
+}
+if (!apiUrl || !anonKey) {
+  throw new Error(
+    "NEXT_PUBLIC_SUPABASE_URL und NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY " +
+      "werden für die echte Anon-Probe benötigt.",
   );
 }
 
@@ -90,7 +106,7 @@ const client = new Client({
 try {
   await client.connect();
 
-  const [tablesResult, policyColumnsResult] = await Promise.all([
+  const [tablesResult, policyColumnsResult, anonGrantsResult] = await Promise.all([
     client.query(`
       select
         relation.oid as table_oid,
@@ -99,6 +115,13 @@ try {
         coalesce(obj_description(relation.oid, 'pg_class'), '') as table_comment,
         policy.polname as policy_name,
         policy.polcmd as policy_command,
+        coalesce(array(
+          select case
+            when policy_role.role_oid = 0 then 'public'
+            else pg_get_userbyid(policy_role.role_oid)
+          end
+          from unnest(policy.polroles) as policy_role(role_oid)
+        ), array[]::text[]) as policy_roles,
         coalesce(pg_get_expr(policy.polqual, policy.polrelid), '') as using_expression,
         coalesce(pg_get_expr(policy.polwithcheck, policy.polrelid), '') as check_expression
       from pg_class as relation
@@ -145,6 +168,13 @@ try {
         and referenced_namespace.nspname = 'public'
       order by policy_table.relname, policy.polname,
         referenced_table.relname, attribute.attname
+    `),
+    client.query(`
+      select table_name, privilege_type
+      from information_schema.role_table_grants
+      where table_schema = 'public'
+        and grantee = 'anon'
+      order by table_name, privilege_type
     `),
   ]);
 
@@ -215,6 +245,23 @@ try {
           `ohne skalaren Unterselect (select auth.uid()).`,
       );
     }
+    if (row.policy_roles.some((role) => ["anon", "public"].includes(role))) {
+      failures.push(
+        `${row.table_name}.${row.policy_name}: gilt für die anonyme Rolle ` +
+          `(${row.policy_roles.join(", ")}).`,
+      );
+    }
+    if (isUnrestrictedUsing(row.using_expression)) {
+      failures.push(
+        `${row.table_name}.${row.policy_name}: verwendet uneingeschränktes USING (true).`,
+      );
+    }
+  }
+
+  for (const row of anonGrantsResult.rows) {
+    failures.push(
+      `${row.table_name}: anon besitzt ${row.privilege_type} auf einer public-Tabelle.`,
+    );
   }
 
   for (const row of policyColumnsResult.rows) {
@@ -225,6 +272,25 @@ try {
       );
     }
   }
+
+  const anonClient = createClient(apiUrl, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const anonProbeReport = [];
+  for (const table of tables.values()) {
+    const { error } = await anonClient.from(table.name).select("*").limit(1);
+    const denied = Boolean(error);
+    anonProbeReport.push({
+      Tabelle: table.name,
+      "Anon-SELECT": denied ? "abgewiesen" : "OFFEN",
+    });
+    if (!denied) {
+      failures.push(
+        `${table.name}: echte SELECT-Abfrage mit dem Anon-Key war möglich.`,
+      );
+    }
+  }
+  console.table(anonProbeReport);
 
   if (failures.length > 0) {
     console.error("\nRLS-Prüfung fehlgeschlagen:");

@@ -34,6 +34,18 @@ test("Rate-Limit-Schlüssel werden vor dem atomaren RPC-Aufruf gehasht", () => {
   assert.match(rateLimit, /createHmac\("sha256"/);
 });
 
+test("RLS-Audit prüft Grants, Policy-Rollen und echte Anon-Abfragen", () => {
+  const audit = readProjectFile("scripts/audit-rls.mjs");
+
+  assert.match(audit, /information_schema\.role_table_grants/);
+  assert.match(audit, /grantee = 'anon'/);
+  assert.match(audit, /policy\.polroles/);
+  assert.match(audit, /\["anon", "public"\]/);
+  assert.match(audit, /isUnrestrictedUsing\(row\.using_expression\)/);
+  assert.match(audit, /createClient\(apiUrl, anonKey/);
+  assert.match(audit, /\.from\(table\.name\)\.select\("\*"\)\.limit\(1\)/);
+});
+
 test("Import, Export und Ergebnis-E-Mail sind begrenzt und gedrosselt", () => {
   const importRoute = readProjectFile("src/app/api/import/route.ts");
   const exportRoute = readProjectFile("src/app/api/export/route.ts");
