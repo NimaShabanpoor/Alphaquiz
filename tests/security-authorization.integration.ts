@@ -710,20 +710,26 @@ for (const [name, path, init] of additionalProtectedEndpoints) {
 }
 
 test("f) ohne ADMIN_EMAIL bleibt der Adminbereich geschlossen", async () => {
-  const closedPort = port + 1;
-  const closedServer = await startServer({ ADMIN_EMAIL: "" }, closedPort);
-  try {
-    const response = await request(
-      "/api/admin/state",
-      {},
-      adminCookie,
-      `http://127.0.0.1:${closedPort}`,
+  for (const [offset, nodeEnvironment] of [
+    [1, "production"],
+    [2, "development"],
+  ] as const) {
+    const closedPort = port + offset;
+    const closedServer = await startServer(
+      { ADMIN_EMAIL: "", NODE_ENV: nodeEnvironment },
+      closedPort,
     );
-    assert.ok([401, 403].includes(response.status));
-    const body = (await response.json()) as JsonObject;
-    assert.deepEqual(Object.keys(body), ["error"]);
-  } finally {
-    await stopServer(closedServer);
+    try {
+      const response = await request(
+        "/api/admin/state",
+        {},
+        adminCookie,
+        `http://127.0.0.1:${closedPort}`,
+      );
+      await assertForbiddenAdminResponse(response);
+    } finally {
+      await stopServer(closedServer);
+    }
   }
 });
 

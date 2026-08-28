@@ -24,10 +24,8 @@ type AdminAuthentication =
 
 export function isAllowedAdminEmail(email: string) {
   const configuredAdminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (process.env.NODE_ENV === "production" && !configuredAdminEmail) {
-    return false;
-  }
-  return !configuredAdminEmail || email === configuredAdminEmail;
+  if (!configuredAdminEmail) return false;
+  return email === configuredAdminEmail;
 }
 
 async function getAuthenticatedAdmin(): Promise<AdminAuthentication> {
