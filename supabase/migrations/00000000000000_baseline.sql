@@ -5,6 +5,12 @@ begin;
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 
+-- Supabase grants new public objects to API roles by default. Keep future
+-- application objects closed to anonymous requests unless a migration opts in.
+alter default privileges in schema public revoke all on tables from anon;
+alter default privileges in schema public revoke all on sequences from anon;
+alter default privileges in schema public revoke all on functions from anon;
+
 create table "private"."request_rate_limits" (
   "key_hash" text not null,
   "request_count" integer not null,
