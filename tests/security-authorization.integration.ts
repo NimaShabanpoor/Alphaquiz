@@ -195,6 +195,19 @@ async function assertNoDataResponse(response: Response, status: number) {
   assert.deepEqual(Object.keys(body), ["error"]);
 }
 
+async function assertServerCanReachSupabase() {
+  const response = await request("/api/admin/status", {}, adminCookie);
+  const body = (await response.json().catch(() => null)) as JsonObject | null;
+  assert.equal(
+    response.status,
+    200,
+    `AlphaQuiz-Startcheck fehlgeschlagen: Der Testserver kann Supabase nicht ` +
+      `mit der Admin-Session erreichen (HTTP ${response.status}, ` +
+      `${JSON.stringify(body)}).`,
+  );
+  assert.deepEqual(body, { configured: true, reachable: true });
+}
+
 async function assertForeignReadDenied(table: string, filter: Filter) {
   const result = await userBClient.from(table).select("*").match(filter);
   assert.ifError(result.error);
@@ -412,6 +425,7 @@ before(async () => {
   });
 
   appProcess = await startServer({ ADMIN_EMAIL: adminEmail });
+  await assertServerCanReachSupabase();
 });
 
 after(async () => {
