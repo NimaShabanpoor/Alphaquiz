@@ -263,6 +263,9 @@ function createCsv(quiz: Quiz, questions: Question[]) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAdmin(request);
+  if (auth.response) return auth.response;
+
   let parsed;
   try {
     parsed = exportPayloadSchema.safeParse(
@@ -283,9 +286,6 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-
-  const auth = await requireAdmin(request);
-  if (auth.response) return auth.response;
 
   const rateLimit = await checkRateLimit(request, "admin-export", 30, 15 * 60_000);
   if (!rateLimit.allowed) {

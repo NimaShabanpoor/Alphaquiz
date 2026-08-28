@@ -5,10 +5,10 @@ import { syncQuizzes } from "@/lib/admin-resource-sync";
 export const runtime = "nodejs";
 
 export async function PUT(request: Request) {
-  const parsed = await parseJsonPayload(request, quizzesPayloadSchema);
-  if (parsed.response) return parsed.response;
   const auth = await authorizeAdminMutation(request);
   if (auth.response) return auth.response;
+  const parsed = await parseJsonPayload(request, quizzesPayloadSchema);
+  if (parsed.response) return parsed.response;
   try {
     await syncQuizzes(auth.client, auth.user.id, parsed.data.quizzes);
     return Response.json({ saved: true });

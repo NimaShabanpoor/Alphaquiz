@@ -272,6 +272,9 @@ function parseJson(source: string) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAdmin(request);
+  if (auth.response) return auth.response;
+
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
   if (!contentType.startsWith("multipart/form-data")) {
     return Response.json(
@@ -289,9 +292,6 @@ export async function POST(request: Request) {
       { status: 413 },
     );
   }
-
-  const auth = await requireAdmin(request);
-  if (auth.response) return auth.response;
 
   const rateLimit = await checkRateLimit(request, "admin-import", 10, 60 * 60_000);
   if (!rateLimit.allowed) {

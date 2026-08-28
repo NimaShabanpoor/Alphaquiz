@@ -14,6 +14,9 @@ const sendBodySchema = z
   .strict();
 
 export async function POST(request: Request) {
+  const auth = await requireAdmin(request);
+  if (auth.response) return auth.response;
+
   let payload: unknown;
   try {
     payload = await readJsonBody(request);
@@ -31,9 +34,6 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const auth = await requireAdmin(request);
-  if (auth.response) return auth.response;
-
   const rateLimit = await checkRateLimit(
     request,
     "result-email",

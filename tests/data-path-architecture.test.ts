@@ -80,6 +80,14 @@ test("Ressourcen werden getrennt validiert und nicht mehr als Blob gespeichert",
     "exports",
     "exam-publications",
   ];
+  const bodyProtectedRoutes = [
+    ...mutationRoutes.map(
+      (resource) => `src/app/api/admin/${resource}/route.ts`,
+    ),
+    "src/app/api/export/route.ts",
+    "src/app/api/exam-results/send/route.ts",
+    "src/app/api/import/route.ts",
+  ];
 
   assert.doesNotMatch(hook, /\/api\/supabase/);
   assert.doesNotMatch(allApiSource, /syncAdminState|isQuizStatePayload/);
@@ -87,10 +95,23 @@ test("Ressourcen werden getrennt validiert und nicht mehr als Blob gespeichert",
     const route = readProjectFile(`src/app/api/admin/${resource}/route.ts`);
     assert.match(route, /parseJsonPayload\(request,/);
     assert.match(route, /PayloadSchema/);
+  }
+  for (const routePath of bodyProtectedRoutes) {
+    const route = readProjectFile(routePath);
+    const authIndex = Math.max(
+      route.indexOf("authorizeAdminMutation(request"),
+      route.indexOf("requireAdmin(request"),
+    );
+    const bodyIndexes = [
+      route.indexOf("parseJsonPayload(request"),
+      route.indexOf("readJsonBody(request"),
+      route.indexOf("request.formData()"),
+    ].filter((index) => index >= 0);
+    assert.ok(authIndex >= 0, `${routePath} muss den Admin prüfen`);
+    assert.ok(bodyIndexes.length > 0, `${routePath} muss einen Body lesen`);
     assert.ok(
-      route.indexOf("parseJsonPayload(request") <
-        route.indexOf("authorizeAdminMutation(request"),
-      `${resource} muss vor dem Datenbankzugriff validieren`,
+      bodyIndexes.every((bodyIndex) => authIndex < bodyIndex),
+      `${routePath} muss authentifizieren, bevor der Body gelesen wird`,
     );
   }
 });

@@ -5,10 +5,10 @@ import { syncTopics } from "@/lib/admin-resource-sync";
 export const runtime = "nodejs";
 
 export async function PUT(request: Request) {
-  const parsed = await parseJsonPayload(request, topicsPayloadSchema);
-  if (parsed.response) return parsed.response;
   const auth = await authorizeAdminMutation(request);
   if (auth.response) return auth.response;
+  const parsed = await parseJsonPayload(request, topicsPayloadSchema);
+  if (parsed.response) return parsed.response;
   try {
     await syncTopics(auth.client, parsed.data.topics);
     return Response.json({ saved: true });
