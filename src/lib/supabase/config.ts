@@ -1,3 +1,5 @@
+import { normalizeSupabaseUrl } from "@/lib/supabase/url";
+
 export type SupabasePublicConfig = {
   url: string;
   publishableKey: string;
@@ -13,7 +15,7 @@ export class SupabasePublicConfigurationError extends Error {
 }
 
 export function getSupabasePublicConfig(): SupabasePublicConfig {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/$/, "");
+  const url = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const publishableKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
 
