@@ -67,8 +67,7 @@ function readEnvironmentFile() {
 }
 
 function requiredEnvironment(name: string) {
-  const value = (process.env[name]?.trim() || fileEnvironment[name]?.trim())
-    ?.replace(/^["']|["']$/g, "");
+  const value = process.env[name]?.trim() || fileEnvironment[name]?.trim();
   assert.ok(value, `${name} muss für die Autorisierungsprüfung gesetzt sein.`);
   return value;
 }
