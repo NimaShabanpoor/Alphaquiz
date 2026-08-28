@@ -12,6 +12,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: alphaquiz_migrations
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d alphaquiz_migrations"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MIGRATION_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/alphaquiz_migrations
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply every migration to disposable PostgreSQL
+        run: npm run db:verify-migrations
+      - name: Upload resulting schema inventory
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: migration-schema-inventory
+          path: migration-schema-inventory.json
+
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 20

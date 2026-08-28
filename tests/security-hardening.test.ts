@@ -27,22 +27,11 @@ test("CSP läuft vor der Durchsetzung im Report-Only-Modus", () => {
   assert.match(config, /object-src 'none'/);
 });
 
-test("Rate Limits werden atomar in einem privaten Schema gespeichert", () => {
+test("Rate-Limit-Schlüssel werden vor dem atomaren RPC-Aufruf gehasht", () => {
   const rateLimit = readProjectFile("src/lib/rate-limit.ts");
-  const schema = readProjectFile("supabase/schema.sql");
-  const migration = readProjectFile(
-    "supabase/migrations/20260826010000_durable_rate_limits.sql",
-  );
 
   assert.match(rateLimit, /client\.rpc\("consume_rate_limit"/);
   assert.match(rateLimit, /createHmac\("sha256"/);
-  for (const sql of [schema, migration]) {
-    assert.match(sql, /create schema if not exists private/);
-    assert.match(sql, /private\.request_rate_limits/);
-    assert.match(sql, /security definer/);
-    assert.match(sql, /set search_path = private, pg_temp/);
-    assert.match(sql, /revoke all on table private\.request_rate_limits/);
-  }
 });
 
 test("Import, Export und Ergebnis-E-Mail sind begrenzt und gedrosselt", () => {

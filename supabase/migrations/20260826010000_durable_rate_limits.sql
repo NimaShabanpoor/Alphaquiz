@@ -1,4 +1,4 @@
-+-- Durable, privacy-preserving API rate limits for serverless deployments
+-- Durable, privacy-preserving API rate limits for serverless deployments
 begin;
 
 create schema if not exists private;
