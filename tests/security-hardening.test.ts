@@ -39,8 +39,8 @@ test("RLS-Audit prüft Grants, Policy-Rollen und echte Anon-Abfragen", () => {
 
   assert.match(audit, /information_schema\.role_table_grants/);
   assert.match(audit, /grantee = 'anon'/);
-  assert.match(audit, /policy\.polroles/);
-  assert.match(audit, /\["anon", "public"\]/);
+  assert.match(audit, /policy\.polroles::regrole\[\]::text\[\]/);
+  assert.match(audit, /\["anon", "public", "0"\]/);
   assert.match(audit, /isUnrestrictedUsing\(row\.using_expression\)/);
   assert.match(audit, /createClient\(apiUrl, anonKey/);
   assert.match(audit, /\.from\(table\.name\)\.select\("\*"\)\.limit\(1\)/);

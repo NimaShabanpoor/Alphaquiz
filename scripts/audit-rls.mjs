@@ -115,13 +115,8 @@ try {
         coalesce(obj_description(relation.oid, 'pg_class'), '') as table_comment,
         policy.polname as policy_name,
         policy.polcmd as policy_command,
-        coalesce(array(
-          select case
-            when policy_role.role_oid = 0 then 'public'
-            else pg_get_userbyid(policy_role.role_oid)
-          end
-          from unnest(policy.polroles) as policy_role(role_oid)
-        ), array[]::text[]) as policy_roles,
+        coalesce(policy.polroles::regrole[]::text[], array[]::text[])
+          as policy_roles,
         coalesce(pg_get_expr(policy.polqual, policy.polrelid), '') as using_expression,
         coalesce(pg_get_expr(policy.polwithcheck, policy.polrelid), '') as check_expression
       from pg_class as relation
@@ -245,7 +240,11 @@ try {
           `ohne skalaren Unterselect (select auth.uid()).`,
       );
     }
-    if (row.policy_roles.some((role) => ["anon", "public"].includes(role))) {
+    if (
+      row.policy_roles.some((role) =>
+        ["anon", "public", "0"].includes(role),
+      )
+    ) {
       failures.push(
         `${row.table_name}.${row.policy_name}: gilt für die anonyme Rolle ` +
           `(${row.policy_roles.join(", ")}).`,
