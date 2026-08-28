@@ -100,6 +100,10 @@ jobs:
       - run: npm run build
       - name: Run unit and authorization tests
         run: npm test
+      - name: Self-test Supabase RLS audit
+        env:
+          RLS_AUDIT_SELF_TEST: "1"
+        run: npm run db:audit-rls:self-test
       - name: Audit RLS on disposable Supabase database
         run: npm run db:audit-rls
       - name: Stop disposable Supabase stack

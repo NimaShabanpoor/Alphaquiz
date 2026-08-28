@@ -46,6 +46,25 @@ test("RLS-Audit prüft Grants, Policy-Rollen und echte Anon-Abfragen", () => {
   assert.match(audit, /\.from\(table\.name\)\.select\("\*"\)\.limit\(1\)/);
 });
 
+test("RLS-Audit beweist seine fünf Fehlerklassen vor dem echten Lauf", () => {
+  const selfTest = readProjectFile("scripts/self-test-audit-rls.mjs");
+  const workflow = readProjectFile(".github/workflows/ci.yml");
+  const packageJson = readProjectFile("package.json");
+
+  assert.match(selfTest, /__alphaquiz_audit_rls_off/);
+  assert.match(selfTest, /using \(true\)/);
+  assert.match(selfTest, /for select to anon/);
+  assert.match(selfTest, /grant select on table[\s\S]*to anon/);
+  assert.match(selfTest, /__alphaquiz_audit_unindexed/);
+  assert.match(selfTest, /5 von 5 erkannt/);
+  assert.match(packageJson, /"db:audit-rls:self-test"/);
+  assert.ok(
+    workflow.indexOf("npm run db:audit-rls:self-test") <
+      workflow.lastIndexOf("run: npm run db:audit-rls"),
+    "Die Selbstprüfung muss vor dem echten Audit laufen.",
+  );
+});
+
 test("Import, Export und Ergebnis-E-Mail sind begrenzt und gedrosselt", () => {
   const importRoute = readProjectFile("src/app/api/import/route.ts");
   const exportRoute = readProjectFile("src/app/api/export/route.ts");

@@ -16,6 +16,7 @@
     "test:authorization": "tsx --test tests/security-authorization.integration.ts",
     "db:verify-migrations": "node scripts/verify-migrations.mjs",
     "db:audit-rls": "node scripts/audit-rls.mjs",
+    "db:audit-rls:self-test": "node scripts/self-test-audit-rls.mjs",
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
     "db:setup": "node scripts/setup-supabase.mjs"
   },
