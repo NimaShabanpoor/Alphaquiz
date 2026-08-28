@@ -35,6 +35,7 @@ async function upsertRows(
 async function deleteMissingIds(
   client: SupabaseClient,
   table: AdminTable,
+  userId: string,
   currentIds: string[],
 ) {
   const { data, error } = await client.from(table).select("id");
@@ -46,6 +47,12 @@ async function deleteMissingIds(
   if (!missing.length) return;
   const { error: deleteError } = await client.from(table).delete().in("id", missing);
   if (deleteError) throw deleteError;
+  console.info("[AlphaQuiz Datenlöschung] Vollersatz hat Datensätze gelöscht", {
+    type: table,
+    count: missing.length,
+    user_id: userId,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 async function replaceQuizQuestionLinks(
@@ -93,10 +100,19 @@ export async function syncCategories(
       color: category.color,
     })),
   );
-  await deleteMissingIds(client, "categories", categories.map((item) => item.id));
+  await deleteMissingIds(
+    client,
+    "categories",
+    userId,
+    categories.map((item) => item.id),
+  );
 }
 
-export async function syncTopics(client: SupabaseClient, topics: Topic[]) {
+export async function syncTopics(
+  client: SupabaseClient,
+  userId: string,
+  topics: Topic[],
+) {
   await upsertRows(
     client,
     "topics",
@@ -106,7 +122,12 @@ export async function syncTopics(client: SupabaseClient, topics: Topic[]) {
       name: topic.name,
     })),
   );
-  await deleteMissingIds(client, "topics", topics.map((item) => item.id));
+  await deleteMissingIds(
+    client,
+    "topics",
+    userId,
+    topics.map((item) => item.id),
+  );
 }
 
 export async function syncQuestions(
@@ -146,8 +167,18 @@ export async function syncQuestions(
     })),
   );
   await upsertRows(client, "answers", answers);
-  await deleteMissingIds(client, "answers", answers.map((item) => item.id));
-  await deleteMissingIds(client, "questions", questions.map((item) => item.id));
+  await deleteMissingIds(
+    client,
+    "answers",
+    userId,
+    answers.map((item) => item.id),
+  );
+  await deleteMissingIds(
+    client,
+    "questions",
+    userId,
+    questions.map((item) => item.id),
+  );
 }
 
 export async function syncQuizzes(
@@ -173,7 +204,12 @@ export async function syncQuizzes(
     })),
   );
   await replaceQuizQuestionLinks(client, quizzes);
-  await deleteMissingIds(client, "quizzes", quizzes.map((item) => item.id));
+  await deleteMissingIds(
+    client,
+    "quizzes",
+    userId,
+    quizzes.map((item) => item.id),
+  );
 }
 
 export async function syncExports(
@@ -193,11 +229,17 @@ export async function syncExports(
       createdAt: record.createdAt,
     })),
   );
-  await deleteMissingIds(client, "exports", exports.map((item) => item.id));
+  await deleteMissingIds(
+    client,
+    "exports",
+    userId,
+    exports.map((item) => item.id),
+  );
 }
 
 export async function syncExamPublications(
   client: SupabaseClient,
+  userId: string,
   publications: ExamPublication[],
 ) {
   await upsertRows(
@@ -229,6 +271,7 @@ export async function syncExamPublications(
   await deleteMissingIds(
     client,
     "exam_publications",
+    userId,
     publications.map((item) => item.id),
   );
 }

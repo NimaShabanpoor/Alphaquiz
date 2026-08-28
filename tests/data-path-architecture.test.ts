@@ -62,7 +62,10 @@ test("Ownership wird beim Schreiben ausschliesslich serverseitig ergänzt", () =
   const sync = readProjectFile("src/lib/admin-resource-sync.ts");
 
   assert.equal(routes.match(/auth\.user\.id/g)?.length, 4);
-  assert.equal(sync.match(/user_id: userId/g)?.length, 4);
+  assert.equal(
+    sync.match(/user_id: userId,\s+(?:name|title|quizId):/g)?.length,
+    4,
+  );
   assert.doesNotMatch(routes, /data\.user_id|data\.userId/);
 });
 

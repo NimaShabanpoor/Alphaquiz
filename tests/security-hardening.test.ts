@@ -65,6 +65,16 @@ test("RLS-Audit beweist seine fünf Fehlerklassen vor dem echten Lauf", () => {
   );
 });
 
+test("Vollersatz-Löschungen werden mit Benutzer und Anzahl protokolliert", () => {
+  const sync = readProjectFile("src/lib/admin-resource-sync.ts");
+
+  assert.match(sync, /\[AlphaQuiz Datenlöschung\]/);
+  assert.match(sync, /type: table/);
+  assert.match(sync, /count: missing\.length/);
+  assert.match(sync, /user_id: userId/);
+  assert.match(sync, /timestamp: new Date\(\)\.toISOString\(\)/);
+});
+
 test("Import, Export und Ergebnis-E-Mail sind begrenzt und gedrosselt", () => {
   const importRoute = readProjectFile("src/app/api/import/route.ts");
   const exportRoute = readProjectFile("src/app/api/export/route.ts");
@@ -72,7 +82,7 @@ test("Import, Export und Ergebnis-E-Mail sind begrenzt und gedrosselt", () => {
 
   assert.match(importRoute, /25 \* 1024 \* 1024/);
   assert.match(importRoute, /hasAccessSignature/);
-  assert.match(importRoute, /questionsPayloadSchema\.safeParse/);
+  assert.match(importRoute, /questionsArraySchema\.safeParse/);
   assert.match(exportRoute, /readJsonBody\(request, 30 \* 1024 \* 1024\)/);
   assert.match(exportRoute, /exportPayloadSchema\.safeParse/);
   assert.match(exportRoute, /\^\[\\t\\r\\n\]\*\[=\+\\-@\]/);

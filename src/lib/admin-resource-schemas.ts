@@ -122,24 +122,116 @@ export const examPublicationSchema = z
   })
   .strict();
 
+export const categoriesArraySchema = z.array(categorySchema).max(10_000);
+const topicsArraySchema = z.array(topicSchema).max(10_000);
+export const questionsArraySchema = z.array(questionSchema).max(10_000);
+const quizzesArraySchema = z.array(quizSchema).max(10_000);
+const exportsArraySchema = z.array(exportRecordSchema).max(10_000);
+const examPublicationsArraySchema = z
+  .array(examPublicationSchema)
+  .max(10_000);
+const confirmDeleteAllSchema = z.literal(true).optional();
+
+function requireDeleteAllConfirmation(
+  items: unknown[],
+  confirmed: true | undefined,
+  resourceName: string,
+  context: z.RefinementCtx,
+) {
+  if (items.length > 0 || confirmed === true) return;
+  context.addIssue({
+    code: "custom",
+    path: ["confirmDeleteAll"],
+    message:
+      `Zum Löschen aller ${resourceName} muss ` +
+      "confirmDeleteAll: true gesetzt sein.",
+  });
+}
+
 export const categoriesPayloadSchema = z
-  .object({ categories: z.array(categorySchema).max(10_000) })
-  .strict();
+  .object({
+    categories: categoriesArraySchema,
+    confirmDeleteAll: confirmDeleteAllSchema,
+  })
+  .strict()
+  .superRefine((payload, context) =>
+    requireDeleteAllConfirmation(
+      payload.categories,
+      payload.confirmDeleteAll,
+      "Kategorien",
+      context,
+    ),
+  );
 export const topicsPayloadSchema = z
-  .object({ topics: z.array(topicSchema).max(10_000) })
-  .strict();
+  .object({
+    topics: topicsArraySchema,
+    confirmDeleteAll: confirmDeleteAllSchema,
+  })
+  .strict()
+  .superRefine((payload, context) =>
+    requireDeleteAllConfirmation(
+      payload.topics,
+      payload.confirmDeleteAll,
+      "Unterkategorien",
+      context,
+    ),
+  );
 export const questionsPayloadSchema = z
-  .object({ questions: z.array(questionSchema).max(10_000) })
-  .strict();
+  .object({
+    questions: questionsArraySchema,
+    confirmDeleteAll: confirmDeleteAllSchema,
+  })
+  .strict()
+  .superRefine((payload, context) =>
+    requireDeleteAllConfirmation(
+      payload.questions,
+      payload.confirmDeleteAll,
+      "Fragen",
+      context,
+    ),
+  );
 export const quizzesPayloadSchema = z
-  .object({ quizzes: z.array(quizSchema).max(10_000) })
-  .strict();
+  .object({
+    quizzes: quizzesArraySchema,
+    confirmDeleteAll: confirmDeleteAllSchema,
+  })
+  .strict()
+  .superRefine((payload, context) =>
+    requireDeleteAllConfirmation(
+      payload.quizzes,
+      payload.confirmDeleteAll,
+      "Quizzes",
+      context,
+    ),
+  );
 export const exportsPayloadSchema = z
-  .object({ exports: z.array(exportRecordSchema).max(10_000) })
-  .strict();
+  .object({
+    exports: exportsArraySchema,
+    confirmDeleteAll: confirmDeleteAllSchema,
+  })
+  .strict()
+  .superRefine((payload, context) =>
+    requireDeleteAllConfirmation(
+      payload.exports,
+      payload.confirmDeleteAll,
+      "Exporte",
+      context,
+    ),
+  );
 export const examPublicationsPayloadSchema = z
-  .object({ examPublications: z.array(examPublicationSchema).max(10_000) })
-  .strict();
+  .object({
+    examPublications: examPublicationsArraySchema,
+    confirmDeleteAll: confirmDeleteAllSchema,
+  })
+  .strict()
+  .superRefine((payload, context) =>
+    requireDeleteAllConfirmation(
+      payload.examPublications,
+      payload.confirmDeleteAll,
+      "Prüfungsveröffentlichungen",
+      context,
+    ),
+  );
 
 export const resourceIdSchema = z.string().trim().min(1).max(200);
 

@@ -3,8 +3,8 @@ import type { Value } from "mdb-reader";
 import type { Category, Question, QuestionType } from "@/lib/quiz-types";
 import { requireAdmin } from "@/lib/admin-auth";
 import {
-  categoriesPayloadSchema,
-  questionsPayloadSchema,
+  categoriesArraySchema,
+  questionsArraySchema,
 } from "@/lib/admin-resource-schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -259,14 +259,14 @@ function parseJson(source: string) {
   };
   const questions = parsed.questions ?? parsed.state?.questions ?? [];
   const categories = parsed.categories ?? parsed.state?.categories ?? [];
-  const parsedQuestions = questionsPayloadSchema.safeParse({ questions });
-  const parsedCategories = categoriesPayloadSchema.safeParse({ categories });
+  const parsedQuestions = questionsArraySchema.safeParse(questions);
+  const parsedCategories = categoriesArraySchema.safeParse(categories);
   if (!parsedQuestions.success || !parsedCategories.success) {
     throw new Error("invalid AlphaQuiz JSON");
   }
   return {
-    questions: parsedQuestions.data.questions,
-    categories: parsedCategories.data.categories,
+    questions: parsedQuestions.data,
+    categories: parsedCategories.data,
     details: { tables: ["JSON"], questionTable: "questions" },
   };
 }
@@ -345,12 +345,8 @@ export async function POST(request: Request) {
         { status: 415 },
       );
     }
-    const parsedQuestions = questionsPayloadSchema.safeParse({
-      questions: result.questions,
-    });
-    const parsedCategories = categoriesPayloadSchema.safeParse({
-      categories: result.categories,
-    });
+    const parsedQuestions = questionsArraySchema.safeParse(result.questions);
+    const parsedCategories = categoriesArraySchema.safeParse(result.categories);
     if (!parsedQuestions.success || !parsedCategories.success) {
       return Response.json(
         { error: "Die Datei enthält ungültige oder zu viele Quizdaten." },
@@ -360,8 +356,8 @@ export async function POST(request: Request) {
     return Response.json({
       fileName: file.name,
       ...result,
-      questions: parsedQuestions.data.questions,
-      categories: parsedCategories.data.categories,
+      questions: parsedQuestions.data,
+      categories: parsedCategories.data,
     });
   } catch (error) {
     console.error("[AlphaQuiz Import] Datei konnte nicht gelesen werden", error);

@@ -10,7 +10,7 @@ export async function PUT(request: Request) {
   const parsed = await parseJsonPayload(request, topicsPayloadSchema);
   if (parsed.response) return parsed.response;
   try {
-    await syncTopics(auth.client, parsed.data.topics);
+    await syncTopics(auth.client, auth.user.id, parsed.data.topics);
     return Response.json({ saved: true });
   } catch (error) {
     return databaseFailure("Unterkategorien speichern", error);

@@ -10,7 +10,11 @@ export async function PUT(request: Request) {
   const parsed = await parseJsonPayload(request, examPublicationsPayloadSchema);
   if (parsed.response) return parsed.response;
   try {
-    await syncExamPublications(auth.client, parsed.data.examPublications);
+    await syncExamPublications(
+      auth.client,
+      auth.user.id,
+      parsed.data.examPublications,
+    );
     return Response.json({ saved: true });
   } catch (error) {
     return databaseFailure("Prüfungsveröffentlichungen speichern", error);
