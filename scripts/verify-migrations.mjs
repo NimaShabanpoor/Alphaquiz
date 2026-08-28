@@ -75,6 +75,10 @@ function compareInventory(reference, actual) {
   return differences;
 }
 
+function quoteIdentifier(value) {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
 async function expectAnonDenied(label, statement) {
   await client.query("begin");
   try {
@@ -96,22 +100,21 @@ async function runAnonProbe(inventory) {
   const report = [];
   for (const table of inventory.tables) {
     const name = `"${table.schema}"."${table.name}"`;
+    const firstColumn = inventory.columns.find(
+      (column) =>
+        column.schema === table.schema && column.table === table.name,
+    )?.column;
+    if (!firstColumn) {
+      verificationFailures.push(
+        `${table.schema}.${table.name}: keine Spalte für die UPDATE-Probe gefunden.`,
+      );
+      continue;
+    }
+    const updateColumn = quoteIdentifier(firstColumn);
     const statements = {
       SELECT: `select * from ${name} limit 0`,
       INSERT: `insert into ${name} default values`,
-      UPDATE: `update ${name} set ${
-        table.schema === "private" ? "key_hash" :
-          inventory.columns.find(
-            (column) =>
-              column.schema === table.schema && column.table === table.name,
-          )?.column
-      } = ${
-        table.schema === "private" ? "key_hash" :
-          inventory.columns.find(
-            (column) =>
-              column.schema === table.schema && column.table === table.name,
-          )?.column
-      } where false`,
+      UPDATE: `update ${name} set ${updateColumn} = ${updateColumn} where false`,
       DELETE: `delete from ${name} where false`,
     };
     for (const [operation, statement] of Object.entries(statements)) {

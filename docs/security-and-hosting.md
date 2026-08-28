@@ -15,17 +15,24 @@ ausgewertet.
 
 ## Erforderliche Einrichtung
 
-1. Bei einer neuen Installation `npm run db:setup` ausführen. Das aktuelle
-   `supabase/schema.sql` enthält Ownership, Indizes und Policies.
-2. Bei einer bestehenden Installation die versionierten Migrationen mit der
-   Supabase CLI (`supabase link`, danach `supabase db push`) anwenden. Keine
-   Änderungen direkt im SQL Editor oder Table Editor vornehmen.
-3. In Supabase Auth genau das Admin-Konto anlegen.
-4. `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+1. Bei einer neuen, leeren Installation das Projekt mit der Supabase CLI
+   verknüpfen und `supabase db push` ausführen. Alternativ kann
+   `npm run db:setup` die Migrationen gegen eine ausdrücklich konfigurierte,
+   leere PostgreSQL-Datenbank anwenden.
+2. Die bereits verifizierte Dev-Datenbank entspricht der Baseline. Nach
+   `supabase migration list` wird diese einmalig mit
+   `supabase migration repair 00000000000000 --status applied` als angewendet
+   registriert; die Baseline wird dort nicht erneut ausgeführt.
+3. `supabase/migrations/` ist die einzige Quelle des Schemas. Jede Änderung
+   wird als neue Migration versioniert, zuerst gegen eine leere
+   Wegwerf-Datenbank geprüft und danach mit `supabase db push` ausgerollt.
+   Schemaänderungen im SQL Editor oder Table Editor sind nicht erlaubt.
+4. In Supabase Auth genau das Admin-Konto anlegen.
+5. `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
    `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_EMAIL`, `APP_ORIGIN`
    und `RATE_LIMIT_SECRET` setzen. `APP_ORIGIN` ist in Produktion die feste
    HTTPS-Adresse ohne Pfad oder abschliessenden Schrägstrich.
-5. Optional `RESEND_API_KEY` und `RESEND_FROM_EMAIL` setzen.
+6. Optional `RESEND_API_KEY` und `RESEND_FROM_EMAIL` setzen.
 
 ## Auth-URL und Redirect-Allow-List
 

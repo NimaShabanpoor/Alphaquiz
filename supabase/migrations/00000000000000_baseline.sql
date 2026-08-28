@@ -11,6 +11,7 @@ alter default privileges in schema public revoke all on tables from anon;
 alter default privileges in schema public revoke all on sequences from anon;
 alter default privileges in schema public revoke all on functions from anon;
 alter default privileges in schema public revoke all on functions from public;
+alter default privileges revoke all on functions from public;
 
 create table "private"."request_rate_limits" (
   "key_hash" text not null,

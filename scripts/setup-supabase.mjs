@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Client } from "pg";
 
@@ -14,10 +14,14 @@ function readEnvValue(source, key) {
 }
 
 const projectRoot = resolve(import.meta.dirname, "..");
-const [envSource, schema] = await Promise.all([
-  readFile(resolve(projectRoot, ".env"), "utf8"),
-  readFile(resolve(projectRoot, "supabase", "schema.sql"), "utf8"),
-]);
+const envSource = await readFile(resolve(projectRoot, ".env"), "utf8");
+const migrationsDirectory = resolve(projectRoot, "supabase", "migrations");
+const migrationFiles = (await readdir(migrationsDirectory))
+  .filter((file) => file.endsWith(".sql"))
+  .sort();
+if (migrationFiles.length === 0) {
+  throw new Error("Keine Datenbankmigration gefunden.");
+}
 const connectionString = readEnvValue(envSource, "SUPABASE_URL");
 const poolerHost = readEnvValue(envSource, "SUPABASE_POOLER_HOST");
 
@@ -47,9 +51,11 @@ const client = new Client({
 
 try {
   await client.connect();
-  await client.query("begin");
-  await client.query(schema);
-  await client.query("commit");
+  for (const migrationFile of migrationFiles) {
+    await client.query(
+      await readFile(resolve(migrationsDirectory, migrationFile), "utf8"),
+    );
+  }
 
   const result = await client.query(`
     select table_name

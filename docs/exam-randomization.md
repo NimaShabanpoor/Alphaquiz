@@ -34,14 +34,15 @@ Versuche derselben E-Mail-Adresse.
 
 ## Migration
 
-`supabase/schema.sql` ergänzt:
+Die Baseline in `supabase/migrations/00000000000000_baseline.sql` enthält:
 
 - `exam_publications.randomization`
 - die Tabelle `exam_instances`
 - einen eindeutigen Teilindex für aktive Versuche
 
-Die Datei muss nach dem Deployment erneut im Supabase SQL Editor ausgeführt
-werden.
+Künftige Änderungen werden als neue Datei in `supabase/migrations/` angelegt
+und ausschliesslich mit der Supabase CLI ausgerollt. Der SQL Editor ist kein
+Deployment-Weg.
 
 ## Sicherheitsgrenze des lokalen Modus
 

@@ -43,8 +43,10 @@ Admin-Konto anmelden. Prüfungslinks werden unter
 2. Öffentliche Projekt-URL und Publishable Key sowie die serverseitige
    PostgreSQL-Verbindungsadresse, den Service-Role-Key und optional den
    IPv4-Pooler-Host aus Supabase eintragen.
-3. `npm run db:setup` ausführen. Das idempotente Skript richtet
-   `supabase/schema.sql` ein und prüft alle Tabellen.
+3. Bei einer neuen, leeren Datenbank `supabase db push` ausführen. Alternativ
+   wendet `npm run db:setup` die Dateien aus `supabase/migrations/` direkt an
+   und prüft danach die Anwendungstabellen. Die Migrationen sind die einzige
+   Quelle des Datenbankschemas.
 4. Den Entwicklungsserver neu starten und unter **Einstellungen** die
    Verbindung prüfen.
 

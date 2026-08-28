@@ -116,6 +116,10 @@ test("Default-Rechte halten künftige Objekte für anon geschlossen", () => {
     baseline,
     /alter default privileges in schema public revoke all on functions from public/,
   );
+  assert.match(
+    baseline,
+    /alter default privileges revoke all on functions from public/,
+  );
 });
 
 test("authenticated erhält nur CRUD-Rechte und anon keine Tabellenrechte", () => {
