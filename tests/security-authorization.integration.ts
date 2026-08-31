@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import { after, before, test } from "node:test";
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { assertSupabaseTestInstanceReachable } from "./support/supabase-preflight";
 
 type JsonObject = Record<string, unknown>;
 type Filter = Record<string, string>;
@@ -309,8 +310,12 @@ async function startPublicAttempt(publicationSlug = slug) {
   };
 }
 
+fileEnvironment = readEnvironmentFile();
+await assertSupabaseTestInstanceReachable(
+  requiredEnvironment("NEXT_PUBLIC_SUPABASE_URL"),
+);
+
 before(async () => {
-  fileEnvironment = readEnvironmentFile();
   const supabaseUrl = requiredEnvironment("NEXT_PUBLIC_SUPABASE_URL");
   const serviceRoleKey = requiredEnvironment("SUPABASE_SERVICE_ROLE_KEY");
   const publishableKey = requiredEnvironment(

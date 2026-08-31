@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+import { assertSupabaseTestInstanceReachable } from "./support/supabase-preflight";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 const readProjectFile = (path: string) =>
@@ -35,6 +36,26 @@ test("Rate-Limit-Schlüssel werden vor dem atomaren RPC-Aufruf gehasht", () => {
   assert.match(rateLimit, /process\.env\.VERCEL/);
   assert.match(rateLimit, /checkIdentifierRateLimit/);
   assert.match(rateLimit, /identifier\.trim\(\)\.toLowerCase\(\)/);
+});
+
+test("Autorisierungstests brechen bei fehlender Testinstanz einmal klar ab", async () => {
+  const unreachableFetch: typeof fetch = async () => {
+    throw new TypeError("fetch failed");
+  };
+
+  await assert.rejects(
+    assertSupabaseTestInstanceReachable(
+      "http://127.0.0.1:54321",
+      unreachableFetch,
+    ),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /Supabase-Testinstanz ist nicht erreichbar/);
+      assert.match(error.message, /supabase start/);
+      assert.match(error.message, /fetch failed/);
+      return true;
+    },
+  );
 });
 
 test("RLS-Audit prüft Grants, Policy-Rollen und echte Anon-Abfragen", () => {
