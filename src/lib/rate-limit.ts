@@ -13,6 +13,17 @@ export type RateLimitResult = {
 type Bucket = { count: number; resetAt: number };
 const developmentBuckets = new Map<string, Bucket>();
 
+class MissingTrustedClientAddressError extends Error {
+  constructor() {
+    super(
+      "Keine vertrauenswürdige Netzwerkherkunft verfügbar. " +
+        "Auf Vercel muss VERCEL gesetzt sein; ausserhalb davon muss " +
+        "TRUSTED_PROXY_HEADER auf einen vom Reverse Proxy gesetzten Header zeigen.",
+    );
+    this.name = "MissingTrustedClientAddressError";
+  }
+}
+
 function trustedAddress(request: Request) {
   if (process.env.VERCEL) {
     const vercelAddress = request.headers
@@ -28,7 +39,7 @@ function trustedAddress(request: Request) {
     if (value) return value;
   }
 
-  return "unbekannt";
+  throw new MissingTrustedClientAddressError();
 }
 
 export function createRateLimitKey(request: Request, scope: string) {
@@ -74,8 +85,17 @@ export async function checkRateLimit(
   limit: number,
   windowMs: number,
 ): Promise<RateLimitResult> {
+  let key: string;
+  try {
+    key = createRateLimitKey(request, scope);
+  } catch (error) {
+    if (!(error instanceof MissingTrustedClientAddressError)) throw error;
+    console.error("[AlphaQuiz Rate Limit] Anfrage geschlossen abgelehnt", error);
+    return { allowed: false, retryAfter: 60, unavailable: true };
+  }
+
   return checkRateLimitKey(
-    createRateLimitKey(request, scope),
+    key,
     scope,
     limit,
     windowMs,

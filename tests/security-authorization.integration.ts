@@ -1059,6 +1059,81 @@ test("F2: wechselnde gefälschte Herkunfts-Header umgehen das E-Mail-Limit nicht
   assert.equal(blocked, true);
 });
 
+test("F3: fehlende vertrauenswürdige Herkunft schliesst, ohne den E-Mail-Bucket auszusetzen", async () => {
+  const isolatedPort = port + 3;
+  const isolatedBaseUrl = `http://127.0.0.1:${isolatedPort}`;
+  const sharedRateLimitSecret = randomBytes(32).toString("hex");
+  const limitedEmail = `missing-origin-${runId}@example.invalid`;
+  let isolatedServer = await startServer(
+    {
+      ADMIN_EMAIL: adminEmail,
+      RATE_LIMIT_SECRET: sharedRateLimitSecret,
+      TRUSTED_PROXY_HEADER: "",
+      VERCEL: "",
+    },
+    isolatedPort,
+  );
+
+  try {
+    for (let index = 0; index < 10; index += 1) {
+      const response = await request(
+        "/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-vercel-forwarded-for": `198.51.100.${index + 1}`,
+          },
+          body: JSON.stringify({
+            email: limitedEmail,
+            password: "wrong-password",
+          }),
+        },
+        "",
+        isolatedBaseUrl,
+      );
+      assert.equal(response.status, 503);
+      assert.deepEqual(await response.json(), {
+        error: "Die Anmeldung ist vorübergehend nicht verfügbar.",
+      });
+    }
+  } finally {
+    await stopServer(isolatedServer);
+  }
+
+  isolatedServer = await startServer(
+    {
+      ADMIN_EMAIL: adminEmail,
+      RATE_LIMIT_SECRET: sharedRateLimitSecret,
+      TRUSTED_PROXY_HEADER: "",
+      VERCEL: "1",
+    },
+    isolatedPort,
+  );
+
+  try {
+    const response = await request(
+      "/api/auth/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-vercel-forwarded-for": "203.0.113.250",
+        },
+        body: JSON.stringify({
+          email: limitedEmail,
+          password: "wrong-password",
+        }),
+      },
+      "",
+      isolatedBaseUrl,
+    );
+    assert.equal(response.status, 429);
+  } finally {
+    await stopServer(isolatedServer);
+  }
+});
+
 test("i) das Passwort-Reset-Rate-Limit greift nach fünf Versuchen", async () => {
   const address = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
   const limitedEmail = `reset-limit-${runId}@example.invalid`;
