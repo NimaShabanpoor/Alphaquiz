@@ -5,6 +5,10 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { assertServiceRoleAllowlist } from "./support/service-role-module-graph";
 
+// Architekturhinweise: Quelltextprüfungen in dieser Datei dokumentieren Regeln,
+// sind aber keine Laufzeitnachweise. Ausdrückliche Wächter-Selbsttests sind davon
+// ausgenommen, weil sie den Fehlerfall tatsächlich ausführen.
+
 const projectRoot = resolve(import.meta.dirname, "..");
 const readProjectFile = (path: string) =>
   readFileSync(resolve(projectRoot, path), "utf8");

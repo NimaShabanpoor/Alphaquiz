@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+
+// Architekturhinweise: Reine Quelltextprüfungen in dieser Datei dokumentieren
+// Sicherheitsregeln, beweisen aber kein Laufzeitverhalten. Tests, die einen
+// Preflight oder Selbsttest tatsächlich ausführen, sind ausdrücklich stärker.
 import { assertSupabaseTestInstanceReachable } from "./support/supabase-preflight";
 
 const projectRoot = resolve(import.meta.dirname, "..");

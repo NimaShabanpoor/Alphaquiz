@@ -3,6 +3,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 
+// Architekturhinweise: Diese Quelltextprüfungen dokumentieren die erwartete
+// Ownership-Struktur. Der wirksame Datenbanknachweis erfolgt separat durch das
+// Migrationsinventar, das RLS-Audit und die Autorisierungstests in CI.
+
 const projectRoot = resolve(import.meta.dirname, "..");
 const migrationsDirectory = resolve(projectRoot, "supabase", "migrations");
 const baseline = readFileSync(
