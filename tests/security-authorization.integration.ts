@@ -311,9 +311,15 @@ async function startPublicAttempt(publicationSlug = slug) {
 }
 
 fileEnvironment = readEnvironmentFile();
-await assertSupabaseTestInstanceReachable(
-  requiredEnvironment("NEXT_PUBLIC_SUPABASE_URL"),
-);
+
+async function assertAuthorizationTestEnvironmentReady() {
+  await assertSupabaseTestInstanceReachable(
+    requiredEnvironment("NEXT_PUBLIC_SUPABASE_URL"),
+  );
+}
+
+async function registerAuthorizationTests() {
+  await assertAuthorizationTestEnvironmentReady();
 
 before(async () => {
   const supabaseUrl = requiredEnvironment("NEXT_PUBLIC_SUPABASE_URL");
@@ -1179,4 +1185,10 @@ test("deleteMissingIds: ein leeres Array mit Flag löscht alle eigenen Exporte",
     .eq("user_id", adminUserId);
   assert.ifError(error);
   assert.deepEqual(data, []);
+});
+}
+
+void registerAuthorizationTests().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
 });
