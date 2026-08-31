@@ -14,11 +14,13 @@ type Bucket = { count: number; resetAt: number };
 const developmentBuckets = new Map<string, Bucket>();
 
 function trustedAddress(request: Request) {
-  const vercelAddress = request.headers
-    .get("x-vercel-forwarded-for")
-    ?.split(",")[0]
-    ?.trim();
-  if (vercelAddress) return vercelAddress;
+  if (process.env.VERCEL) {
+    const vercelAddress = request.headers
+      .get("x-vercel-forwarded-for")
+      ?.split(",")[0]
+      ?.trim();
+    if (vercelAddress) return vercelAddress;
+  }
 
   const configuredHeader = process.env.TRUSTED_PROXY_HEADER?.trim().toLowerCase();
   if (configuredHeader) {
@@ -30,7 +32,11 @@ function trustedAddress(request: Request) {
 }
 
 export function createRateLimitKey(request: Request, scope: string) {
-  const value = `${scope}:${trustedAddress(request)}`;
+  return createScopedRateLimitKey(scope, trustedAddress(request));
+}
+
+function createScopedRateLimitKey(scope: string, identifier: string) {
+  const value = `${scope}:${identifier}`;
   const secret = process.env.RATE_LIMIT_SECRET?.trim();
   if (secret && secret.length >= 32) {
     return createHmac("sha256", secret).update(value).digest("hex");
@@ -68,9 +74,35 @@ export async function checkRateLimit(
   limit: number,
   windowMs: number,
 ): Promise<RateLimitResult> {
-  let key: string | undefined;
+  return checkRateLimitKey(
+    createRateLimitKey(request, scope),
+    scope,
+    limit,
+    windowMs,
+  );
+}
+
+export async function checkIdentifierRateLimit(
+  scope: string,
+  identifier: string,
+  limit: number,
+  windowMs: number,
+): Promise<RateLimitResult> {
+  return checkRateLimitKey(
+    createScopedRateLimitKey(scope, identifier.trim().toLowerCase()),
+    scope,
+    limit,
+    windowMs,
+  );
+}
+
+async function checkRateLimitKey(
+  key: string,
+  scope: string,
+  limit: number,
+  windowMs: number,
+): Promise<RateLimitResult> {
   try {
-    key = createRateLimitKey(request, scope);
     const { url, publishableKey } = getSupabasePublicConfig();
     const client = createClient(url, publishableKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -101,7 +133,7 @@ export async function checkRateLimit(
     );
     if (process.env.NODE_ENV !== "production") {
       return checkDevelopmentBucket(
-        key ?? createHash("sha256").update(scope).digest("hex"),
+        key,
         limit,
         windowMs,
       );

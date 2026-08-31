@@ -186,6 +186,9 @@ async function request(
 ) {
   const headers = new Headers(init.headers);
   headers.set("Origin", appOrigin);
+  if (!headers.has("x-vercel-forwarded-for")) {
+    headers.set("x-vercel-forwarded-for", "192.0.2.10");
+  }
   if (cookie) headers.set("Cookie", cookie);
   return fetch(`${targetBaseUrl}${path}`, { ...init, headers });
 }
@@ -476,7 +479,7 @@ before(async () => {
     createdAt: new Date().toISOString(),
   });
 
-  appProcess = await startServer({ ADMIN_EMAIL: adminEmail });
+  appProcess = await startServer({ ADMIN_EMAIL: adminEmail, VERCEL: "1" });
   await assertServerCanReachSupabase();
 });
 
@@ -997,6 +1000,7 @@ test("h) Zod lehnt einen falschen Typ mit 400 ab", async () => {
 
 test("i) das Login-Rate-Limit greift nach zehn Versuchen", async () => {
   const address = `198.51.100.${Math.floor(Math.random() * 200) + 1}`;
+  const limitedEmail = `login-limit-${runId}@example.invalid`;
   for (let index = 0; index < 10; index += 1) {
     const response = await request("/api/auth/login", {
       method: "POST",
@@ -1004,7 +1008,7 @@ test("i) das Login-Rate-Limit greift nach zehn Versuchen", async () => {
         "Content-Type": "application/json",
         "x-vercel-forwarded-for": address,
       },
-      body: JSON.stringify({ email: userBEmail, password: "wrong-password" }),
+      body: JSON.stringify({ email: limitedEmail, password: "wrong-password" }),
     });
     assert.notEqual(response.status, 429);
   }
@@ -1014,13 +1018,39 @@ test("i) das Login-Rate-Limit greift nach zehn Versuchen", async () => {
       "Content-Type": "application/json",
       "x-vercel-forwarded-for": address,
     },
-    body: JSON.stringify({ email: userBEmail, password: "wrong-password" }),
+    body: JSON.stringify({ email: limitedEmail, password: "wrong-password" }),
   });
   assert.equal(blocked.status, 429);
 });
 
+test("F2: wechselnde gefälschte Herkunfts-Header umgehen das E-Mail-Limit nicht", async () => {
+  const attackedEmail = `rate-limit-attack-${runId}@example.invalid`;
+  let blocked = false;
+
+  for (let index = 0; index < 25; index += 1) {
+    const response = await request("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-vercel-forwarded-for": `198.51.100.${index + 1}`,
+      },
+      body: JSON.stringify({
+        email: attackedEmail,
+        password: "wrong-password",
+      }),
+    });
+    if (response.status === 429) {
+      blocked = true;
+      break;
+    }
+  }
+
+  assert.equal(blocked, true);
+});
+
 test("i) das Passwort-Reset-Rate-Limit greift nach fünf Versuchen", async () => {
   const address = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
+  const limitedEmail = `reset-limit-${runId}@example.invalid`;
   for (let index = 0; index < 5; index += 1) {
     const response = await request("/api/auth/reset", {
       method: "POST",
@@ -1028,7 +1058,7 @@ test("i) das Passwort-Reset-Rate-Limit greift nach fünf Versuchen", async () =>
         "Content-Type": "application/json",
         "x-vercel-forwarded-for": address,
       },
-      body: JSON.stringify({ email: userBEmail }),
+      body: JSON.stringify({ email: limitedEmail }),
     });
     assert.notEqual(response.status, 429);
   }
@@ -1038,7 +1068,7 @@ test("i) das Passwort-Reset-Rate-Limit greift nach fünf Versuchen", async () =>
       "Content-Type": "application/json",
       "x-vercel-forwarded-for": address,
     },
-    body: JSON.stringify({ email: userBEmail }),
+    body: JSON.stringify({ email: limitedEmail }),
   });
   assert.equal(blocked.status, 429);
 });

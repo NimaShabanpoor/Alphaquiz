@@ -32,6 +32,9 @@ test("Rate-Limit-Schlüssel werden vor dem atomaren RPC-Aufruf gehasht", () => {
 
   assert.match(rateLimit, /client\.rpc\("consume_rate_limit"/);
   assert.match(rateLimit, /createHmac\("sha256"/);
+  assert.match(rateLimit, /process\.env\.VERCEL/);
+  assert.match(rateLimit, /checkIdentifierRateLimit/);
+  assert.match(rateLimit, /identifier\.trim\(\)\.toLowerCase\(\)/);
 });
 
 test("RLS-Audit prüft Grants, Policy-Rollen und echte Anon-Abfragen", () => {

@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAllowedAdminEmail } from "@/lib/admin-auth";
 import { trustedMutationOrigin } from "@/lib/app-origin";
-import { checkRateLimit } from "@/lib/rate-limit";
+import {
+  checkIdentifierRateLimit,
+  checkRateLimit,
+} from "@/lib/rate-limit";
 import { readJsonBody, RequestBodyError } from "@/lib/request-body";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -35,26 +38,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const rateLimit = await checkRateLimit(
-    request,
-    "admin-login",
-    10,
-    15 * 60_000,
+  const { email, password } = parsed.data;
+  const [networkRateLimit, emailRateLimit] = await Promise.all([
+    checkRateLimit(request, "admin-login-network", 10, 15 * 60_000),
+    checkIdentifierRateLimit("admin-login-email", email, 10, 15 * 60_000),
+  ]);
+  const blockedRateLimit = [networkRateLimit, emailRateLimit].find(
+    (result) => !result.allowed,
   );
-  if (!rateLimit.allowed) {
+  if (blockedRateLimit) {
     return NextResponse.json(
       {
-        error: rateLimit.unavailable
+        error: blockedRateLimit.unavailable
           ? "Die Anmeldung ist vorübergehend nicht verfügbar."
           : "Zu viele Anmeldeversuche. Bitte warte einen Moment.",
       },
       {
-        status: rateLimit.unavailable ? 503 : 429,
-        headers: { "Retry-After": String(rateLimit.retryAfter) },
+        status: blockedRateLimit.unavailable ? 503 : 429,
+        headers: { "Retry-After": String(blockedRateLimit.retryAfter) },
       },
     );
   }
-  const { email, password } = parsed.data;
 
   let supabase;
   try {
