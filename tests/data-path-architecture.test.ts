@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
-import { extname, join, relative, resolve } from "node:path";
+import {
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { extname, join, resolve } from "node:path";
 import test from "node:test";
+import { assertServiceRoleAllowlist } from "./support/service-role-module-graph";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 const readProjectFile = (path: string) =>
@@ -40,16 +48,57 @@ test("Admin-Datenzugriffe verwenden den request-scoped User-Client", () => {
 });
 
 test("Service Role bleibt auf die zwei öffentlichen Prüfungsendpunkte begrenzt", () => {
-  const routeRoot = resolve(projectRoot, "src/app/api");
-  const consumers = listTypeScriptFiles(routeRoot)
-    .filter((path) => readFileSync(path, "utf8").includes("getSupabaseAdmin"))
-    .map((path) => relative(projectRoot, path).replaceAll("\\", "/"))
-    .sort();
+  assertServiceRoleAllowlist({
+    projectRoot,
+    allowedConsumers: [
+      "src/app/api/public/exam-attempts/[attemptId]/route.ts",
+      "src/app/api/public/exams/[slug]/route.ts",
+    ],
+  });
+});
 
-  assert.deepEqual(consumers, [
-    "src/app/api/public/exam-attempts/[attemptId]/route.ts",
-    "src/app/api/public/exams/[slug]/route.ts",
-  ]);
+test("Service-Role-Wächter erkennt dynamische und transitive Umgehungen", () => {
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), "alphaquiz-service-role-guard-"),
+  );
+  const bridge = join(temporaryDirectory, "bridge.ts");
+  const consumer = join(temporaryDirectory, "consumer.ts");
+  writeFileSync(
+    bridge,
+    'export const loadAdmin = () => import("@/lib/supabase-admin");\n',
+  );
+  writeFileSync(consumer, 'import { loadAdmin } from "./bridge";\nvoid loadAdmin;\n');
+
+  try {
+    assert.throws(
+      () =>
+        assertServiceRoleAllowlist({
+          projectRoot,
+          allowedConsumers: [
+            "src/app/api/public/exam-attempts/[attemptId]/route.ts",
+            "src/app/api/public/exams/[slug]/route.ts",
+          ],
+          entryFiles: [
+            ...listTypeScriptFiles(resolve(projectRoot, "src")),
+            consumer,
+          ],
+        }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message.includes(bridge.replaceAll("\\", "/")) &&
+        error.message.includes(consumer.replaceAll("\\", "/")),
+    );
+  } finally {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+
+  assertServiceRoleAllowlist({
+    projectRoot,
+    allowedConsumers: [
+      "src/app/api/public/exam-attempts/[attemptId]/route.ts",
+      "src/app/api/public/exams/[slug]/route.ts",
+    ],
+  });
 });
 
 test("Ownership wird beim Schreiben ausschliesslich serverseitig ergänzt", () => {

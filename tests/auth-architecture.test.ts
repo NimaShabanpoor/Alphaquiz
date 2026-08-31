@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import test from "node:test";
+import { assertServiceRoleAllowlist } from "./support/service-role-module-graph";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 const readProjectFile = (path: string) =>
@@ -23,6 +25,10 @@ const protectedRouteHandlers = [
   "src/app/api/export/route.ts",
   "src/app/api/import/route.ts",
 ] as const;
+
+const authRouteHandlers = ["login", "logout", "reset"].map((route) =>
+  resolve(projectRoot, `src/app/api/auth/${route}/route.ts`),
+);
 
 test("Supabase SSR verwendet getrennte Browser- und Server-Clients", () => {
   const browserClient = readProjectFile("src/lib/supabase/client.ts");
@@ -68,11 +74,49 @@ test("geschützte Route Handler prüfen die Session selbst mit getUser", () => {
 });
 
 test("Auth-Endpunkte verwenden nie den Service-Role-Client", () => {
+  assertServiceRoleAllowlist({
+    projectRoot,
+    allowedConsumers: [],
+    entryFiles: authRouteHandlers,
+  });
+
   for (const route of ["login", "logout", "reset"]) {
     const source = readProjectFile(`src/app/api/auth/${route}/route.ts`);
-    assert.doesNotMatch(source, /supabase-admin|getSupabaseAdmin/);
     assert.match(source, /createSupabaseServerClient/);
   }
+});
+
+test("Auth-Service-Role-Wächter beweist seinen Fehlerfall", () => {
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), "alphaquiz-auth-service-role-guard-"),
+  );
+  const forbiddenRoute = join(temporaryDirectory, "route.ts");
+  writeFileSync(
+    forbiddenRoute,
+    'import { getSupabaseAdmin } from "@/lib/supabase-admin";\nvoid getSupabaseAdmin;\n',
+  );
+
+  try {
+    assert.throws(
+      () =>
+        assertServiceRoleAllowlist({
+          projectRoot,
+          allowedConsumers: [],
+          entryFiles: [...authRouteHandlers, forbiddenRoute],
+        }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message.includes(forbiddenRoute.replaceAll("\\", "/")),
+    );
+  } finally {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+
+  assertServiceRoleAllowlist({
+    projectRoot,
+    allowedConsumers: [],
+    entryFiles: authRouteHandlers,
+  });
 });
 
 test("Proxy ist nur UX-Redirect und ersetzt keine Handler-Autorisierung", () => {
