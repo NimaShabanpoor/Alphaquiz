@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/admin-auth";
+import { loadOwnedExamAttempt } from "@/lib/admin-ownership";
 import { sendAttemptResultEmail } from "@/lib/result-email";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { readJsonBody, RequestBodyError } from "@/lib/request-body";
@@ -55,9 +56,20 @@ export async function POST(request: Request) {
   }
 
   try {
+    const attempt = await loadOwnedExamAttempt(
+      auth.client,
+      auth.user.id,
+      parsed.data.attemptId,
+    );
+    if (!attempt) {
+      return Response.json(
+        { error: "Das Prüfungsresultat wurde nicht gefunden." },
+        { status: 404 },
+      );
+    }
     const result = await sendAttemptResultEmail(
       auth.client,
-      parsed.data.attemptId,
+      attempt.id,
       parsed.data.deliveryId,
     );
     return Response.json(result);

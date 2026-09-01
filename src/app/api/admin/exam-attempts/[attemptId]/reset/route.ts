@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/admin-auth";
 import { databaseFailure } from "@/lib/admin-api";
+import { loadOwnedExamAttempt } from "@/lib/admin-ownership";
 import { resourceIdSchema } from "@/lib/admin-resource-schemas";
 
 export const runtime = "nodejs";
@@ -17,50 +18,56 @@ export async function POST(request: Request, context: RouteContext) {
   const auth = await requireAdmin(request);
   if (auth.response) return auth.response;
 
-  const attemptId = parsedId.data;
-  const { data: attempt, error: readError } = await auth.client
-    .from("exam_attempts")
-    .select("id,publicationId,status")
-    .eq("id", attemptId)
-    .maybeSingle();
-  if (readError) {
-    return databaseFailure("Prüfungsversuch laden", readError);
-  }
-  if (!attempt) {
-    return Response.json(
-      { error: "Der Prüfungsversuch wurde nicht gefunden." },
-      { status: 404 },
-    );
-  }
-  if (attempt.status === "in-progress") {
-    return Response.json(
-      { error: "Ein laufender Versuch kann nicht freigegeben werden." },
-      { status: 409 },
-    );
-  }
-
-  const updatedAt = new Date().toISOString();
-  const { error: updateError } = await auth.client
-    .from("exam_attempts")
-    .update({ status: "reset", updatedAt })
-    .eq("id", attemptId);
-  if (updateError) {
-    return databaseFailure("Prüfungsversuch freigeben", updateError);
-  }
-
-  const { error: eventError } = await auth.client
-    .from("exam_events")
-    .insert({
-      id: `event-${crypto.randomUUID()}`,
-      publicationId: String(attempt.publicationId),
+  try {
+    const attemptId = parsedId.data;
+    const attempt = await loadOwnedExamAttempt(
+      auth.client,
+      auth.user.id,
       attemptId,
-      type: "reset",
-      message: "Versuch durch Administrator freigegeben",
-      createdAt: updatedAt,
-    });
-  if (eventError) {
-    return databaseFailure("Freigabe protokollieren", eventError);
-  }
+    );
+    if (!attempt) {
+      return Response.json(
+        { error: "Der Prüfungsversuch wurde nicht gefunden." },
+        { status: 404 },
+      );
+    }
+    if (attempt.status === "in-progress") {
+      return Response.json(
+        { error: "Ein laufender Versuch kann nicht freigegeben werden." },
+        { status: 409 },
+      );
+    }
 
-  return Response.json({ reset: true });
+    const updatedAt = new Date().toISOString();
+    const { data: updated, error: updateError } = await auth.client
+      .from("exam_attempts")
+      .update({ status: "reset", updatedAt })
+      .eq("id", attemptId)
+      .eq("publicationId", attempt.publicationId)
+      .select("id")
+      .maybeSingle();
+    if (updateError) throw updateError;
+    if (!updated) {
+      return Response.json(
+        { error: "Der Prüfungsversuch wurde nicht gefunden." },
+        { status: 404 },
+      );
+    }
+
+    const { error: eventError } = await auth.client
+      .from("exam_events")
+      .insert({
+        id: `event-${crypto.randomUUID()}`,
+        publicationId: attempt.publicationId,
+        attemptId,
+        type: "reset",
+        message: "Versuch durch Administrator freigegeben",
+        createdAt: updatedAt,
+      });
+    if (eventError) throw eventError;
+
+    return Response.json({ reset: true });
+  } catch (error) {
+    return databaseFailure("Prüfungsversuch freigeben", error);
+  }
 }

@@ -106,7 +106,12 @@ const client = new Client({
 try {
   await client.connect();
 
-  const [tablesResult, policyColumnsResult, anonGrantsResult] = await Promise.all([
+  const [
+    tablesResult,
+    policyColumnsResult,
+    anonGrantsResult,
+    anonRoutineGrantsResult,
+  ] = await Promise.all([
     client.query(`
       select
         relation.oid as table_oid,
@@ -170,6 +175,13 @@ try {
       where table_schema = 'public'
         and grantee = 'anon'
       order by table_name, privilege_type
+    `),
+    client.query(`
+      select routine_name, specific_name, privilege_type
+      from information_schema.role_routine_grants
+      where routine_schema = 'public'
+        and grantee = 'anon'
+      order by routine_name, specific_name, privilege_type
     `),
   ]);
 
@@ -263,6 +275,12 @@ try {
     );
   }
 
+  for (const row of anonRoutineGrantsResult.rows) {
+    failures.push(
+      `${row.routine_name}: anon besitzt ${row.privilege_type} auf einer public-Funktion.`,
+    );
+  }
+
   for (const row of policyColumnsResult.rows) {
     if (!row.has_index) {
       failures.push(
@@ -288,6 +306,24 @@ try {
         `${table.name}: echte SELECT-Abfrage mit dem Anon-Key war möglich.`,
       );
     }
+  }
+  const { error: rateLimitProbeError } = await anonClient.rpc(
+    "consume_rate_limit",
+    {
+      p_key_hash: "0".repeat(64),
+      p_limit: 1,
+      p_window_seconds: 60,
+    },
+  );
+  const rateLimitProbeDenied = Boolean(rateLimitProbeError);
+  anonProbeReport.push({
+    Tabelle: "public.consume_rate_limit",
+    "Anon-SELECT": rateLimitProbeDenied ? "abgewiesen" : "OFFEN",
+  });
+  if (!rateLimitProbeDenied) {
+    failures.push(
+      "consume_rate_limit: echter RPC-Aufruf mit dem Anon-Key war möglich.",
+    );
   }
   console.table(anonProbeReport);
 

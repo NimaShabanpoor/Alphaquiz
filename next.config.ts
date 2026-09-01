@@ -6,29 +6,10 @@ const nextConfig: NextConfig = {
     root: process.cwd(),
   },
   async headers() {
-    const development = process.env.NODE_ENV !== "production";
-    const contentSecurityPolicy = [
-      "default-src 'self'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "frame-ancestors 'none'",
-      "object-src 'none'",
-      "img-src 'self' data: blob:",
-      "font-src 'self' data:",
-      "style-src 'self' 'unsafe-inline'",
-      `script-src 'self' 'unsafe-inline'${development ? " 'unsafe-eval'" : ""}`,
-      `connect-src 'self'${development ? " ws: wss:" : ""}`,
-      ...(development ? [] : ["upgrade-insecure-requests"]),
-    ].join("; ");
-
     return [
       {
         source: "/:path*",
         headers: [
-          {
-            key: "Content-Security-Policy-Report-Only",
-            value: contentSecurityPolicy,
-          },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },

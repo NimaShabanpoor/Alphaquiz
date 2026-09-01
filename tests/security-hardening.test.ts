@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+import { createContentSecurityPolicy } from "../src/lib/content-security-policy";
+
+// Architekturhinweise: Reine Quelltextprüfungen in dieser Datei dokumentieren
+// Sicherheitsregeln, beweisen aber kein Laufzeitverhalten. Tests, die einen
+// Preflight oder Selbsttest tatsächlich ausführen, sind ausdrücklich stärker.
+import { assertSupabaseTestInstanceReachable } from "./support/supabase-preflight";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 const readProjectFile = (path: string) =>
@@ -19,12 +25,30 @@ test("Passwort-Redirect und Mutationen verwenden die feste APP_ORIGIN", () => {
   assert.match(appOrigin, /url\.protocol !== "https:"/);
 });
 
-test("CSP läuft vor der Durchsetzung im Report-Only-Modus", () => {
-  const config = readProjectFile("next.config.ts");
-  assert.match(config, /Content-Security-Policy-Report-Only/);
-  assert.doesNotMatch(config, /key: "Content-Security-Policy",/);
-  assert.match(config, /frame-ancestors 'none'/);
-  assert.match(config, /object-src 'none'/);
+test("Nonce-CSP meldet Verstösse im Report-Only-Modus", () => {
+  const productionPolicy = createContentSecurityPolicy("test-nonce", false);
+  const developmentPolicy = createContentSecurityPolicy("test-nonce", true);
+  const scriptDirective = productionPolicy
+    .split("; ")
+    .find((directive) => directive.startsWith("script-src"));
+  const proxy = readProjectFile("src/proxy.ts");
+  const reportRoute = readProjectFile("src/app/api/security/csp-report/route.ts");
+
+  assert.ok(scriptDirective);
+  assert.match(scriptDirective, /'nonce-test-nonce'/);
+  assert.match(scriptDirective, /'strict-dynamic'/);
+  assert.doesNotMatch(scriptDirective, /'unsafe-inline'/);
+  assert.doesNotMatch(productionPolicy, /'unsafe-eval'/);
+  assert.match(developmentPolicy, /'unsafe-eval'/);
+  assert.match(productionPolicy, /frame-ancestors 'none'/);
+  assert.match(productionPolicy, /object-src 'none'/);
+  assert.match(productionPolicy, /report-to alphaquiz-csp/);
+  assert.match(productionPolicy, /report-uri \/api\/security\/csp-report/);
+  assert.match(proxy, /Content-Security-Policy-Report-Only/);
+  assert.match(proxy, /Reporting-Endpoints/);
+  assert.match(proxy, /"x-nonce"/);
+  assert.match(reportRoute, /await checkRateLimit\(/);
+  assert.match(reportRoute, /\[AlphaQuiz CSP\] Report-Only-Verstoss/);
 });
 
 test("Rate-Limit-Schlüssel werden vor dem atomaren RPC-Aufruf gehasht", () => {
@@ -32,12 +56,36 @@ test("Rate-Limit-Schlüssel werden vor dem atomaren RPC-Aufruf gehasht", () => {
 
   assert.match(rateLimit, /client\.rpc\("consume_rate_limit"/);
   assert.match(rateLimit, /createHmac\("sha256"/);
+  assert.match(rateLimit, /process\.env\.VERCEL/);
+  assert.match(rateLimit, /checkIdentifierRateLimit/);
+  assert.match(rateLimit, /identifier\.trim\(\)\.toLowerCase\(\)/);
+});
+
+test("Autorisierungstests brechen bei fehlender Testinstanz einmal klar ab", async () => {
+  const unreachableFetch: typeof fetch = async () => {
+    throw new TypeError("fetch failed");
+  };
+
+  await assert.rejects(
+    assertSupabaseTestInstanceReachable(
+      "http://127.0.0.1:54321",
+      unreachableFetch,
+    ),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /Supabase-Testinstanz ist nicht erreichbar/);
+      assert.match(error.message, /supabase start/);
+      assert.match(error.message, /fetch failed/);
+      return true;
+    },
+  );
 });
 
 test("RLS-Audit prüft Grants, Policy-Rollen und echte Anon-Abfragen", () => {
   const audit = readProjectFile("scripts/audit-rls.mjs");
 
   assert.match(audit, /information_schema\.role_table_grants/);
+  assert.match(audit, /information_schema\.role_routine_grants/);
   assert.match(audit, /grantee = 'anon'/);
   assert.match(audit, /policy\.polroles::regrole\[\]::text\[\]/);
   assert.match(audit, /\["anon", "public", "0"\]/);
@@ -46,7 +94,7 @@ test("RLS-Audit prüft Grants, Policy-Rollen und echte Anon-Abfragen", () => {
   assert.match(audit, /\.from\(table\.name\)\.select\("\*"\)\.limit\(1\)/);
 });
 
-test("RLS-Audit beweist seine fünf Fehlerklassen vor dem echten Lauf", () => {
+test("RLS-Audit beweist seine sechs Fehlerklassen vor dem echten Lauf", () => {
   const selfTest = readProjectFile("scripts/self-test-audit-rls.mjs");
   const workflow = readProjectFile(".github/workflows/ci.yml");
   const packageJson = readProjectFile("package.json");
@@ -56,7 +104,8 @@ test("RLS-Audit beweist seine fünf Fehlerklassen vor dem echten Lauf", () => {
   assert.match(selfTest, /for select to anon/);
   assert.match(selfTest, /grant select on table[\s\S]*to anon/);
   assert.match(selfTest, /__alphaquiz_audit_unindexed/);
-  assert.match(selfTest, /5 von 5 erkannt/);
+  assert.match(selfTest, /__alphaquiz_audit_anon_function/);
+  assert.match(selfTest, /6 von 6 erkannt/);
   assert.match(packageJson, /"db:audit-rls:self-test"/);
   assert.ok(
     workflow.indexOf("npm run db:audit-rls:self-test") <
@@ -89,6 +138,17 @@ test("Import, Export und Ergebnis-E-Mail sind begrenzt und gedrosselt", () => {
   for (const route of [importRoute, exportRoute, emailRoute]) {
     assert.match(route, /await checkRateLimit\(/);
   }
+});
+
+test("Öffentliche Prüfungsdaten sind gedrosselt und auf Quiz-Themen begrenzt", () => {
+  const publicExamRoute = readProjectFile(
+    "src/app/api/public/exams/[slug]/route.ts",
+  );
+  const examData = readProjectFile("src/lib/exam-data.ts");
+
+  assert.match(publicExamRoute, /await checkRateLimit\([\s\S]*?"exam-metadata"/);
+  assert.match(examData, /from\("topics"\)\.select\("\*"\)\.in\("id", topicIds\)/);
+  assert.match(examData, /questionResult\.data[\s\S]*?question\.topicId/);
 });
 
 test("Die Admin-Oberfläche unterstützt Tastatur und reduzierte Bewegung", () => {

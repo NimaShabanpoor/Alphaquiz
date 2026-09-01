@@ -51,6 +51,7 @@ const dropFixtures = `
   drop table if exists public.__alphaquiz_audit_anon_policy cascade;
   drop table if exists public.__alphaquiz_audit_anon_grant cascade;
   drop table if exists public.__alphaquiz_audit_unindexed cascade;
+  drop function if exists public.__alphaquiz_audit_anon_function();
 `;
 
 try {
@@ -104,6 +105,12 @@ try {
       for select to authenticated
       using (owner_id = (select auth.uid()));
 
+    create function public.__alphaquiz_audit_anon_function()
+      returns integer
+      language sql
+      as 'select 1';
+    grant execute on function public.__alphaquiz_audit_anon_function() to anon;
+
     notify pgrst, 'reload schema';
   `);
 
@@ -149,6 +156,11 @@ try {
         "__alphaquiz_audit_unindexed.__alphaquiz_selftest_unindexed: " +
         "Policy-Spalte __alphaquiz_audit_unindexed.owner_id hat keinen Index.",
     },
+    {
+      Fall: "Funktions-GRANT an anon",
+      marker:
+        "__alphaquiz_audit_anon_function: anon besitzt EXECUTE auf einer public-Funktion.",
+    },
   ];
   const report = expectations.map(({ Fall, marker }) => ({
     Fall,
@@ -162,10 +174,10 @@ try {
     throw new Error(
       !auditFailed
         ? "Das Audit hat die absichtlich unsichere Datenbank akzeptiert."
-        : `Das Audit hat ${missing.length} von 5 Testfehlern nicht erkannt.`,
+        : `Das Audit hat ${missing.length} von 6 Testfehlern nicht erkannt.`,
     );
   }
-  console.log("RLS-Audit-Selbstprüfung erfolgreich: 5 von 5 erkannt.");
+  console.log("RLS-Audit-Selbstprüfung erfolgreich: 6 von 6 erkannt.");
 } finally {
   if (connected) {
     await client.query(dropFixtures).catch(() => undefined);

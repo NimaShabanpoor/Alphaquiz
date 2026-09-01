@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAppOrigin, trustedMutationOrigin } from "@/lib/app-origin";
-import { checkRateLimit } from "@/lib/rate-limit";
+import {
+  checkIdentifierRateLimit,
+  checkRateLimit,
+} from "@/lib/rate-limit";
 import { readJsonBody, RequestBodyError } from "@/lib/request-body";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -33,26 +36,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const rateLimit = await checkRateLimit(
-    request,
-    "password-reset",
-    5,
-    60 * 60_000,
+  const { email } = parsed.data;
+  const [networkRateLimit, emailRateLimit] = await Promise.all([
+    checkRateLimit(request, "password-reset-network", 5, 60 * 60_000),
+    checkIdentifierRateLimit("password-reset-email", email, 5, 60 * 60_000),
+  ]);
+  const blockedRateLimit = [networkRateLimit, emailRateLimit].find(
+    (result) => !result.allowed,
   );
-  if (!rateLimit.allowed) {
+  if (blockedRateLimit) {
     return NextResponse.json(
       {
-        error: rateLimit.unavailable
+        error: blockedRateLimit.unavailable
           ? "Die Passwortfunktion ist vorübergehend nicht verfügbar."
           : "Zu viele Anfragen. Bitte versuche es später erneut.",
       },
       {
-        status: rateLimit.unavailable ? 503 : 429,
-        headers: { "Retry-After": String(rateLimit.retryAfter) },
+        status: blockedRateLimit.unavailable ? 503 : 429,
+        headers: { "Retry-After": String(blockedRateLimit.retryAfter) },
       },
     );
   }
-  const { email } = parsed.data;
 
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   if (

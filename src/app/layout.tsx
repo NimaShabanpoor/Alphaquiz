@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import { AppProvider } from "@/components/app-provider";
 import AppShell from "@/components/app-shell";
 import "./globals.css";
@@ -18,11 +19,13 @@ export const viewport: Viewport = {
   themeColor: "#fbfaf8",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await connection();
+
   return (
     <html data-scroll-behavior="smooth" lang="de-CH">
       <body>

@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import { after, before, test } from "node:test";
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { assertSupabaseTestInstanceReachable } from "./support/supabase-preflight";
 
 type JsonObject = Record<string, unknown>;
 type Filter = Record<string, string>;
@@ -24,6 +25,14 @@ const ids = {
   attempt: `security-attempt-${runId}`,
   instance: `security-instance-${runId}`,
   event: `security-event-${runId}`,
+  foreignResetQuiz: `security-foreign-reset-quiz-${runId}`,
+  foreignResetPublication: `security-foreign-reset-publication-${runId}`,
+  foreignResetAttempt: `security-foreign-reset-attempt-${runId}`,
+  foreignDeleteQuiz: `security-foreign-delete-quiz-${runId}`,
+  foreignDeletePublication: `security-foreign-delete-publication-${runId}`,
+  foreignEmailQuiz: `security-foreign-email-quiz-${runId}`,
+  foreignEmailPublication: `security-foreign-email-publication-${runId}`,
+  foreignEmailAttempt: `security-foreign-email-attempt-${runId}`,
 };
 const slug = `security-${runId}`;
 const password = `Security-${randomBytes(16).toString("hex")}!`;
@@ -186,6 +195,9 @@ async function request(
 ) {
   const headers = new Headers(init.headers);
   headers.set("Origin", appOrigin);
+  if (!headers.has("x-vercel-forwarded-for")) {
+    headers.set("x-vercel-forwarded-for", "192.0.2.10");
+  }
   if (cookie) headers.set("Cookie", cookie);
   return fetch(`${targetBaseUrl}${path}`, { ...init, headers });
 }
@@ -306,8 +318,18 @@ async function startPublicAttempt(publicationSlug = slug) {
   };
 }
 
+fileEnvironment = readEnvironmentFile();
+
+async function assertAuthorizationTestEnvironmentReady() {
+  await assertSupabaseTestInstanceReachable(
+    requiredEnvironment("NEXT_PUBLIC_SUPABASE_URL"),
+  );
+}
+
+async function registerAuthorizationTests() {
+  await assertAuthorizationTestEnvironmentReady();
+
 before(async () => {
-  fileEnvironment = readEnvironmentFile();
   const supabaseUrl = requiredEnvironment("NEXT_PUBLIC_SUPABASE_URL");
   const serviceRoleKey = requiredEnvironment("SUPABASE_SERVICE_ROLE_KEY");
   const publishableKey = requiredEnvironment(
@@ -454,6 +476,91 @@ before(async () => {
     resultEmailStatus: "pending",
     updatedAt: new Date().toISOString(),
   });
+  await insertFixture(
+    "quizzes",
+    [ids.foreignResetQuiz, ids.foreignDeleteQuiz, ids.foreignEmailQuiz].map(
+      (id) => ({
+        id,
+        user_id: userBId,
+        title: `Foreign ${id}`,
+        description: "",
+        categoryId: null,
+        status: "ready",
+        passPercentage: 70,
+        scoringMode: "combined",
+        topicPassPercentages: {},
+        hiddenTopicIds: [],
+        updatedAt: new Date().toISOString(),
+      }),
+    ),
+  );
+  await insertFixture("exam_publications", [
+    {
+      id: ids.foreignResetPublication,
+      quizId: ids.foreignResetQuiz,
+      slug: `security-foreign-reset-${runId}`,
+      mode: "closed",
+      active: true,
+      sendResults: false,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: ids.foreignDeletePublication,
+      quizId: ids.foreignDeleteQuiz,
+      slug: `security-foreign-delete-${runId}`,
+      mode: "closed",
+      active: true,
+      sendResults: false,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: ids.foreignEmailPublication,
+      quizId: ids.foreignEmailQuiz,
+      slug: `security-foreign-email-${runId}`,
+      mode: "closed",
+      active: true,
+      sendResults: false,
+      createdAt: new Date().toISOString(),
+    },
+  ]);
+  await insertFixture("exam_attempts", [
+    {
+      id: ids.foreignResetAttempt,
+      publicationId: ids.foreignResetPublication,
+      name: "Foreign reset attempt",
+      email: `foreign-reset-${runId}@example.invalid`,
+      status: "submitted",
+      startedAt: new Date().toISOString(),
+      currentQuestion: 0,
+      responses: {},
+      score: 0,
+      possible: 1,
+      percentage: 0,
+      passed: false,
+      topicResults: [],
+      violationCount: 0,
+      resultEmailStatus: "pending",
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: ids.foreignEmailAttempt,
+      publicationId: ids.foreignEmailPublication,
+      name: "Foreign email attempt",
+      email: `foreign-email-${runId}@example.invalid`,
+      status: "submitted",
+      startedAt: new Date().toISOString(),
+      currentQuestion: 0,
+      responses: {},
+      score: 0,
+      possible: 1,
+      percentage: 0,
+      passed: false,
+      topicResults: [],
+      violationCount: 0,
+      resultEmailStatus: "pending",
+      updatedAt: new Date().toISOString(),
+    },
+  ]);
   await insertFixture("exam_instances", {
     id: ids.instance,
     attemptId: ids.attempt,
@@ -476,7 +583,7 @@ before(async () => {
     createdAt: new Date().toISOString(),
   });
 
-  appProcess = await startServer({ ADMIN_EMAIL: adminEmail });
+  appProcess = await startServer({ ADMIN_EMAIL: adminEmail, VERCEL: "1" });
   await assertServerCanReachSupabase();
 });
 
@@ -484,6 +591,12 @@ after(async () => {
   await stopServer(appProcess);
   if (serviceClient) {
     for (const [table, filter] of [
+      ["exam_attempts", { id: ids.foreignResetAttempt }],
+      ["exam_attempts", { id: ids.foreignEmailAttempt }],
+      ["exam_publications", { id: ids.foreignResetPublication }],
+      ["exam_publications", { id: ids.foreignDeletePublication }],
+      ["exam_publications", { id: ids.foreignEmailPublication }],
+      ["quizzes", { user_id: userBId }],
       ["exam_events", { publicationId: ids.publication }],
       ["exam_instances", { publicationId: ids.publication }],
       ["exam_attempts", { publicationId: ids.publication }],
@@ -791,6 +904,15 @@ test("anon kann aus public-Tabellen nicht löschen", async () => {
   assert.ok(error);
 });
 
+test("F9: anon kann den Rate-Limit-RPC nicht direkt aufrufen", async () => {
+  const { error } = await anonClient.rpc("consume_rate_limit", {
+    p_key_hash: "0".repeat(64),
+    p_limit: 1,
+    p_window_seconds: 60,
+  });
+  assert.ok(error);
+});
+
 for (const [name, path, method, body] of unauthenticatedEndpoints) {
   test(`e) Nicht-Admin erhält bei ${name} 403`, async () => {
     const response = await request(
@@ -842,11 +964,146 @@ test("f) ohne ADMIN_EMAIL bleibt der Adminbereich geschlossen", async () => {
 });
 
 test("g) der öffentliche Prüfungsaufruf liefert keine Antwortschlüssel", async () => {
-  const response = await fetch(`${baseUrl}/api/public/exams/${slug}`);
+  const response = await request(`/api/public/exams/${slug}`);
   assert.equal(response.status, 200);
   const source = await response.text();
   assert.doesNotMatch(source, /"correct"\s*:/);
   assert.doesNotMatch(source, /Secret correct answer/);
+});
+
+test("F7: der öffentliche Prüfungsabruf wird pro Netzwerkherkunft gedrosselt", async () => {
+  const address = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
+  for (let index = 0; index < 20; index += 1) {
+    const response = await request(`/api/public/exams/${slug}`, {
+      headers: { "x-vercel-forwarded-for": address },
+    });
+    assert.equal(response.status, 200);
+  }
+
+  const blocked = await request(`/api/public/exams/${slug}`, {
+    headers: { "x-vercel-forwarded-for": address },
+  });
+  assert.equal(blocked.status, 429);
+  assert.ok(Number(blocked.headers.get("Retry-After")) > 0);
+});
+
+test("F12: ein fremder Prüfungsversuch kann nicht freigegeben werden", async () => {
+  const response = await request(
+    `/api/admin/exam-attempts/${ids.foreignResetAttempt}/reset`,
+    { method: "POST" },
+    adminCookie,
+  );
+  await assertNoDataResponse(response, 404);
+
+  const stored = await serviceClient
+    .from("exam_attempts")
+    .select("status")
+    .eq("id", ids.foreignResetAttempt)
+    .single();
+  assert.ifError(stored.error);
+  assert.equal(stored.data.status, "submitted");
+});
+
+test("F12: eine fremde Prüfungsveröffentlichung kann nicht gelöscht werden", async () => {
+  const response = await request(
+    `/api/admin/exam-publications/${ids.foreignDeletePublication}`,
+    { method: "DELETE" },
+    adminCookie,
+  );
+  await assertNoDataResponse(response, 404);
+
+  const stored = await serviceClient
+    .from("exam_publications")
+    .select("id")
+    .eq("id", ids.foreignDeletePublication)
+    .single();
+  assert.ifError(stored.error);
+  assert.equal(stored.data.id, ids.foreignDeletePublication);
+});
+
+test("F12: für ein fremdes Prüfungsresultat wird keine E-Mail ausgelöst", async () => {
+  const response = await request(
+    "/api/exam-results/send",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-vercel-forwarded-for": "198.51.100.212",
+      },
+      body: JSON.stringify({ attemptId: ids.foreignEmailAttempt }),
+    },
+    adminCookie,
+  );
+  await assertNoDataResponse(response, 404);
+
+  const stored = await serviceClient
+    .from("exam_attempts")
+    .select("resultEmailStatus")
+    .eq("id", ids.foreignEmailAttempt)
+    .single();
+  assert.ifError(stored.error);
+  assert.equal(stored.data.resultEmailStatus, "pending");
+});
+
+test("F10: Seiten erhalten eine nonce-basierte Report-Only-CSP", async () => {
+  const response = await request("/login");
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Content-Security-Policy"), null);
+
+  const policy = response.headers.get("Content-Security-Policy-Report-Only");
+  assert.ok(policy);
+  const scriptDirective = policy
+    .split("; ")
+    .find((directive) => directive.startsWith("script-src"));
+  assert.ok(scriptDirective);
+  assert.doesNotMatch(scriptDirective, /'unsafe-inline'/);
+  assert.match(scriptDirective, /'strict-dynamic'/);
+  assert.match(policy, /report-to alphaquiz-csp/);
+  assert.match(
+    response.headers.get("Reporting-Endpoints") ?? "",
+    /alphaquiz-csp=/,
+  );
+
+  const nonce = scriptDirective.match(/'nonce-([^']+)'/)?.[1];
+  assert.ok(nonce);
+  const html = await response.text();
+  assert.match(html, new RegExp(`nonce=["']${nonce}["']`));
+});
+
+test("F10: der öffentliche CSP-Meldeendpunkt wird gedrosselt", async () => {
+  const address = `198.51.100.${Math.floor(Math.random() * 30) + 220}`;
+  const body = JSON.stringify({
+    "csp-report": {
+      "document-uri": `${baseUrl}/login?secret=removed`,
+      "blocked-uri": "https://attacker.example/script.js?token=removed",
+      "effective-directive": "script-src-elem",
+      disposition: "report",
+      "status-code": 200,
+    },
+  });
+
+  for (let index = 0; index < 20; index += 1) {
+    const response = await request("/api/security/csp-report", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/csp-report",
+        "x-vercel-forwarded-for": address,
+      },
+      body,
+    });
+    assert.equal(response.status, 204);
+  }
+
+  const blocked = await request("/api/security/csp-report", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/csp-report",
+      "x-vercel-forwarded-for": address,
+    },
+    body,
+  });
+  assert.equal(blocked.status, 429);
+  assert.ok(Number(blocked.headers.get("Retry-After")) > 0);
 });
 
 test("g) ein Prüfungsversuch ohne Token liefert keine Prüfungsdaten", async () => {
@@ -997,6 +1254,7 @@ test("h) Zod lehnt einen falschen Typ mit 400 ab", async () => {
 
 test("i) das Login-Rate-Limit greift nach zehn Versuchen", async () => {
   const address = `198.51.100.${Math.floor(Math.random() * 200) + 1}`;
+  const limitedEmail = `login-limit-${runId}@example.invalid`;
   for (let index = 0; index < 10; index += 1) {
     const response = await request("/api/auth/login", {
       method: "POST",
@@ -1004,7 +1262,7 @@ test("i) das Login-Rate-Limit greift nach zehn Versuchen", async () => {
         "Content-Type": "application/json",
         "x-vercel-forwarded-for": address,
       },
-      body: JSON.stringify({ email: userBEmail, password: "wrong-password" }),
+      body: JSON.stringify({ email: limitedEmail, password: "wrong-password" }),
     });
     assert.notEqual(response.status, 429);
   }
@@ -1014,13 +1272,114 @@ test("i) das Login-Rate-Limit greift nach zehn Versuchen", async () => {
       "Content-Type": "application/json",
       "x-vercel-forwarded-for": address,
     },
-    body: JSON.stringify({ email: userBEmail, password: "wrong-password" }),
+    body: JSON.stringify({ email: limitedEmail, password: "wrong-password" }),
   });
   assert.equal(blocked.status, 429);
 });
 
+test("F2: wechselnde gefälschte Herkunfts-Header umgehen das E-Mail-Limit nicht", async () => {
+  const attackedEmail = `rate-limit-attack-${runId}@example.invalid`;
+  let blocked = false;
+
+  for (let index = 0; index < 25; index += 1) {
+    const response = await request("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-vercel-forwarded-for": `198.51.100.${index + 1}`,
+      },
+      body: JSON.stringify({
+        email: attackedEmail,
+        password: "wrong-password",
+      }),
+    });
+    if (response.status === 429) {
+      blocked = true;
+      break;
+    }
+  }
+
+  assert.equal(blocked, true);
+});
+
+test("F3: fehlende vertrauenswürdige Herkunft schliesst, ohne den E-Mail-Bucket auszusetzen", async () => {
+  const isolatedPort = port + 3;
+  const isolatedBaseUrl = `http://127.0.0.1:${isolatedPort}`;
+  const sharedRateLimitSecret = randomBytes(32).toString("hex");
+  const limitedEmail = `missing-origin-${runId}@example.invalid`;
+  let isolatedServer = await startServer(
+    {
+      ADMIN_EMAIL: adminEmail,
+      RATE_LIMIT_SECRET: sharedRateLimitSecret,
+      TRUSTED_PROXY_HEADER: "",
+      VERCEL: "",
+    },
+    isolatedPort,
+  );
+
+  try {
+    for (let index = 0; index < 10; index += 1) {
+      const response = await request(
+        "/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-vercel-forwarded-for": `198.51.100.${index + 1}`,
+          },
+          body: JSON.stringify({
+            email: limitedEmail,
+            password: "wrong-password",
+          }),
+        },
+        "",
+        isolatedBaseUrl,
+      );
+      assert.equal(response.status, 503);
+      assert.deepEqual(await response.json(), {
+        error: "Die Anmeldung ist vorübergehend nicht verfügbar.",
+      });
+    }
+  } finally {
+    await stopServer(isolatedServer);
+  }
+
+  isolatedServer = await startServer(
+    {
+      ADMIN_EMAIL: adminEmail,
+      RATE_LIMIT_SECRET: sharedRateLimitSecret,
+      TRUSTED_PROXY_HEADER: "",
+      VERCEL: "1",
+    },
+    isolatedPort,
+  );
+
+  try {
+    const response = await request(
+      "/api/auth/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-vercel-forwarded-for": "203.0.113.250",
+        },
+        body: JSON.stringify({
+          email: limitedEmail,
+          password: "wrong-password",
+        }),
+      },
+      "",
+      isolatedBaseUrl,
+    );
+    assert.equal(response.status, 429);
+  } finally {
+    await stopServer(isolatedServer);
+  }
+});
+
 test("i) das Passwort-Reset-Rate-Limit greift nach fünf Versuchen", async () => {
   const address = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
+  const limitedEmail = `reset-limit-${runId}@example.invalid`;
   for (let index = 0; index < 5; index += 1) {
     const response = await request("/api/auth/reset", {
       method: "POST",
@@ -1028,7 +1387,7 @@ test("i) das Passwort-Reset-Rate-Limit greift nach fünf Versuchen", async () =>
         "Content-Type": "application/json",
         "x-vercel-forwarded-for": address,
       },
-      body: JSON.stringify({ email: userBEmail }),
+      body: JSON.stringify({ email: limitedEmail }),
     });
     assert.notEqual(response.status, 429);
   }
@@ -1038,7 +1397,7 @@ test("i) das Passwort-Reset-Rate-Limit greift nach fünf Versuchen", async () =>
       "Content-Type": "application/json",
       "x-vercel-forwarded-for": address,
     },
-    body: JSON.stringify({ email: userBEmail }),
+    body: JSON.stringify({ email: limitedEmail }),
   });
   assert.equal(blocked.status, 429);
 });
@@ -1144,4 +1503,10 @@ test("deleteMissingIds: ein leeres Array mit Flag löscht alle eigenen Exporte",
     .eq("user_id", adminUserId);
   assert.ifError(error);
   assert.deepEqual(data, []);
+});
+}
+
+void registerAuthorizationTests().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
 });
