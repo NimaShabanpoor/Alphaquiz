@@ -865,7 +865,7 @@ test("f) ohne ADMIN_EMAIL bleibt der Adminbereich geschlossen", async () => {
 });
 
 test("g) der öffentliche Prüfungsaufruf liefert keine Antwortschlüssel", async () => {
-  const response = await fetch(`${baseUrl}/api/public/exams/${slug}`);
+  const response = await request(`/api/public/exams/${slug}`);
   assert.equal(response.status, 200);
   const source = await response.text();
   assert.doesNotMatch(source, /"correct"\s*:/);
