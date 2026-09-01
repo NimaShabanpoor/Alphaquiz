@@ -121,6 +121,17 @@ test("Import, Export und Ergebnis-E-Mail sind begrenzt und gedrosselt", () => {
   }
 });
 
+test("Öffentliche Prüfungsdaten sind gedrosselt und auf Quiz-Themen begrenzt", () => {
+  const publicExamRoute = readProjectFile(
+    "src/app/api/public/exams/[slug]/route.ts",
+  );
+  const examData = readProjectFile("src/lib/exam-data.ts");
+
+  assert.match(publicExamRoute, /await checkRateLimit\([\s\S]*?"exam-metadata"/);
+  assert.match(examData, /from\("topics"\)\.select\("\*"\)\.in\("id", topicIds\)/);
+  assert.match(examData, /questionResult\.data[\s\S]*?question\.topicId/);
+});
+
 test("Die Admin-Oberfläche unterstützt Tastatur und reduzierte Bewegung", () => {
   const shell = readProjectFile("src/components/app-shell.tsx");
   const shellCss = readProjectFile("src/components/app-shell.module.css");

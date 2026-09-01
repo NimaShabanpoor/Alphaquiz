@@ -85,7 +85,7 @@ async function loadExamSource(
   if (linkError) throw new Error(linkError.message);
 
   const questionIds = (links ?? []).map((link) => String(link.questionId));
-  const [questionResult, answerResult, topicResult] = await Promise.all([
+  const [questionResult, answerResult] = await Promise.all([
     questionIds.length
       ? client.from("questions").select("*").in("id", questionIds)
       : Promise.resolve({ data: [], error: null }),
@@ -96,10 +96,20 @@ async function loadExamSource(
           .in("questionId", questionIds)
           .order("position")
       : Promise.resolve({ data: [], error: null }),
-    client.from("topics").select("*"),
   ]);
   if (questionResult.error) throw new Error(questionResult.error.message);
   if (answerResult.error) throw new Error(answerResult.error.message);
+
+  const topicIds = [
+    ...new Set(
+      (questionResult.data ?? [])
+        .map((question) => String(question.topicId ?? ""))
+        .filter(Boolean),
+    ),
+  ];
+  const topicResult = topicIds.length
+    ? await client.from("topics").select("*").in("id", topicIds)
+    : { data: [], error: null };
   if (topicResult.error) throw new Error(topicResult.error.message);
 
   const answersByQuestion = new Map<string, Question["answers"]>();

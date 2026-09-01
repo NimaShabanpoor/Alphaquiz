@@ -872,6 +872,22 @@ test("g) der öffentliche Prüfungsaufruf liefert keine Antwortschlüssel", asyn
   assert.doesNotMatch(source, /Secret correct answer/);
 });
 
+test("F7: der öffentliche Prüfungsabruf wird pro Netzwerkherkunft gedrosselt", async () => {
+  const address = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
+  for (let index = 0; index < 20; index += 1) {
+    const response = await request(`/api/public/exams/${slug}`, {
+      headers: { "x-vercel-forwarded-for": address },
+    });
+    assert.equal(response.status, 200);
+  }
+
+  const blocked = await request(`/api/public/exams/${slug}`, {
+    headers: { "x-vercel-forwarded-for": address },
+  });
+  assert.equal(blocked.status, 429);
+  assert.ok(Number(blocked.headers.get("Retry-After")) > 0);
+});
+
 test("g) ein Prüfungsversuch ohne Token liefert keine Prüfungsdaten", async () => {
   const response = await fetch(
     `${baseUrl}/api/public/exam-attempts/${ids.attempt}`,

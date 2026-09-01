@@ -48,7 +48,27 @@ function unavailableMessage(
   return "";
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
+  const rateLimit = await checkRateLimit(
+    request,
+    "exam-metadata",
+    20,
+    5 * 60_000,
+  );
+  if (!rateLimit.allowed) {
+    return Response.json(
+      {
+        error: rateLimit.unavailable
+          ? "Der Prüfungsabruf ist vorübergehend nicht verfügbar."
+          : "Zu viele Prüfungsabrufe. Bitte warte einen Moment.",
+      },
+      {
+        status: rateLimit.unavailable ? 503 : 429,
+        headers: { "Retry-After": String(rateLimit.retryAfter) },
+      },
+    );
+  }
+
   const { slug } = await context.params;
   const supabase = getSupabaseAdmin();
   if (!supabase.client) {
