@@ -25,6 +25,14 @@ const ids = {
   attempt: `security-attempt-${runId}`,
   instance: `security-instance-${runId}`,
   event: `security-event-${runId}`,
+  foreignResetQuiz: `security-foreign-reset-quiz-${runId}`,
+  foreignResetPublication: `security-foreign-reset-publication-${runId}`,
+  foreignResetAttempt: `security-foreign-reset-attempt-${runId}`,
+  foreignDeleteQuiz: `security-foreign-delete-quiz-${runId}`,
+  foreignDeletePublication: `security-foreign-delete-publication-${runId}`,
+  foreignEmailQuiz: `security-foreign-email-quiz-${runId}`,
+  foreignEmailPublication: `security-foreign-email-publication-${runId}`,
+  foreignEmailAttempt: `security-foreign-email-attempt-${runId}`,
 };
 const slug = `security-${runId}`;
 const password = `Security-${randomBytes(16).toString("hex")}!`;
@@ -468,6 +476,91 @@ before(async () => {
     resultEmailStatus: "pending",
     updatedAt: new Date().toISOString(),
   });
+  await insertFixture(
+    "quizzes",
+    [ids.foreignResetQuiz, ids.foreignDeleteQuiz, ids.foreignEmailQuiz].map(
+      (id) => ({
+        id,
+        user_id: userBId,
+        title: `Foreign ${id}`,
+        description: "",
+        categoryId: null,
+        status: "ready",
+        passPercentage: 70,
+        scoringMode: "combined",
+        topicPassPercentages: {},
+        hiddenTopicIds: [],
+        updatedAt: new Date().toISOString(),
+      }),
+    ),
+  );
+  await insertFixture("exam_publications", [
+    {
+      id: ids.foreignResetPublication,
+      quizId: ids.foreignResetQuiz,
+      slug: `security-foreign-reset-${runId}`,
+      mode: "closed",
+      active: true,
+      sendResults: false,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: ids.foreignDeletePublication,
+      quizId: ids.foreignDeleteQuiz,
+      slug: `security-foreign-delete-${runId}`,
+      mode: "closed",
+      active: true,
+      sendResults: false,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: ids.foreignEmailPublication,
+      quizId: ids.foreignEmailQuiz,
+      slug: `security-foreign-email-${runId}`,
+      mode: "closed",
+      active: true,
+      sendResults: false,
+      createdAt: new Date().toISOString(),
+    },
+  ]);
+  await insertFixture("exam_attempts", [
+    {
+      id: ids.foreignResetAttempt,
+      publicationId: ids.foreignResetPublication,
+      name: "Foreign reset attempt",
+      email: `foreign-reset-${runId}@example.invalid`,
+      status: "submitted",
+      startedAt: new Date().toISOString(),
+      currentQuestion: 0,
+      responses: {},
+      score: 0,
+      possible: 1,
+      percentage: 0,
+      passed: false,
+      topicResults: [],
+      violationCount: 0,
+      resultEmailStatus: "pending",
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: ids.foreignEmailAttempt,
+      publicationId: ids.foreignEmailPublication,
+      name: "Foreign email attempt",
+      email: `foreign-email-${runId}@example.invalid`,
+      status: "submitted",
+      startedAt: new Date().toISOString(),
+      currentQuestion: 0,
+      responses: {},
+      score: 0,
+      possible: 1,
+      percentage: 0,
+      passed: false,
+      topicResults: [],
+      violationCount: 0,
+      resultEmailStatus: "pending",
+      updatedAt: new Date().toISOString(),
+    },
+  ]);
   await insertFixture("exam_instances", {
     id: ids.instance,
     attemptId: ids.attempt,
@@ -498,6 +591,12 @@ after(async () => {
   await stopServer(appProcess);
   if (serviceClient) {
     for (const [table, filter] of [
+      ["exam_attempts", { id: ids.foreignResetAttempt }],
+      ["exam_attempts", { id: ids.foreignEmailAttempt }],
+      ["exam_publications", { id: ids.foreignResetPublication }],
+      ["exam_publications", { id: ids.foreignDeletePublication }],
+      ["exam_publications", { id: ids.foreignEmailPublication }],
+      ["quizzes", { user_id: userBId }],
       ["exam_events", { publicationId: ids.publication }],
       ["exam_instances", { publicationId: ids.publication }],
       ["exam_attempts", { publicationId: ids.publication }],
@@ -886,6 +985,64 @@ test("F7: der öffentliche Prüfungsabruf wird pro Netzwerkherkunft gedrosselt",
   });
   assert.equal(blocked.status, 429);
   assert.ok(Number(blocked.headers.get("Retry-After")) > 0);
+});
+
+test("F12: ein fremder Prüfungsversuch kann nicht freigegeben werden", async () => {
+  const response = await request(
+    `/api/admin/exam-attempts/${ids.foreignResetAttempt}/reset`,
+    { method: "POST" },
+    adminCookie,
+  );
+  await assertNoDataResponse(response, 404);
+
+  const stored = await serviceClient
+    .from("exam_attempts")
+    .select("status")
+    .eq("id", ids.foreignResetAttempt)
+    .single();
+  assert.ifError(stored.error);
+  assert.equal(stored.data.status, "submitted");
+});
+
+test("F12: eine fremde Prüfungsveröffentlichung kann nicht gelöscht werden", async () => {
+  const response = await request(
+    `/api/admin/exam-publications/${ids.foreignDeletePublication}`,
+    { method: "DELETE" },
+    adminCookie,
+  );
+  await assertNoDataResponse(response, 404);
+
+  const stored = await serviceClient
+    .from("exam_publications")
+    .select("id")
+    .eq("id", ids.foreignDeletePublication)
+    .single();
+  assert.ifError(stored.error);
+  assert.equal(stored.data.id, ids.foreignDeletePublication);
+});
+
+test("F12: für ein fremdes Prüfungsresultat wird keine E-Mail ausgelöst", async () => {
+  const response = await request(
+    "/api/exam-results/send",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-vercel-forwarded-for": "198.51.100.212",
+      },
+      body: JSON.stringify({ attemptId: ids.foreignEmailAttempt }),
+    },
+    adminCookie,
+  );
+  await assertNoDataResponse(response, 404);
+
+  const stored = await serviceClient
+    .from("exam_attempts")
+    .select("resultEmailStatus")
+    .eq("id", ids.foreignEmailAttempt)
+    .single();
+  assert.ifError(stored.error);
+  assert.equal(stored.data.resultEmailStatus, "pending");
 });
 
 test("g) ein Prüfungsversuch ohne Token liefert keine Prüfungsdaten", async () => {
