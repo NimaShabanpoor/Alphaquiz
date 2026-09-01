@@ -1,7 +1,7 @@
 "use client";
 
 import { Cloud, Database, RefreshCw, RotateCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuizApp } from "@/components/app-provider";
 import { PageHeader, ui } from "@/components/ui";
 import styles from "./page.module.css";
@@ -12,47 +12,72 @@ type Status = {
   error?: string;
 };
 
+async function loadSupabaseStatus() {
+  const response = await fetch("/api/admin/status", { cache: "no-store" });
+  const data = (await response.json()) as Status;
+  if (!response.ok) {
+    throw new Error(data.error || "Verbindungsprüfung fehlgeschlagen.");
+  }
+  return data;
+}
+
 export default function SettingsPage() {
-  const { state, resetDemo, showToast } = useQuizApp();
+  const { connected, resetDemo, showToast } = useQuizApp();
   const [status, setStatus] = useState<Status | null>(null);
-  const [syncing, setSyncing] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  const checkConnection = useCallback(
+    async (showSuccess = false) => {
+      setChecking(true);
+      try {
+        const data = await loadSupabaseStatus();
+        setStatus(data);
+        if (showSuccess && data.reachable) {
+          showToast("Supabase ist verbunden. Die Daten werden neu geladen.");
+          window.setTimeout(() => window.location.reload(), 300);
+        }
+      } catch (error) {
+        setStatus({ configured: false, reachable: false });
+        if (showSuccess) {
+          showToast(
+            error instanceof Error
+              ? error.message
+              : "Verbindungsprüfung fehlgeschlagen.",
+          );
+        }
+      } finally {
+        setChecking(false);
+      }
+    },
+    [showToast],
+  );
 
   useEffect(() => {
-    void fetch("/api/supabase")
-      .then((response) => response.json())
-      .then((data: Status) => setStatus(data))
-      .catch(() =>
-        setStatus({ configured: false, reachable: false }),
-      );
+    let cancelled = false;
+    void loadSupabaseStatus()
+      .then((data) => {
+        if (!cancelled) setStatus(data);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStatus({ configured: false, reachable: false });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setChecking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  async function sync() {
-    setSyncing(true);
-    try {
-      const response = await fetch("/api/supabase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(state),
-      });
-      const data = (await response.json()) as {
-        error?: string;
-        syncedAt?: string;
-      };
-      if (!response.ok) throw new Error(data.error || "Sync fehlgeschlagen.");
-      showToast("Daten wurden mit Supabase synchronisiert.");
-      setStatus({ configured: true, reachable: true });
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Sync fehlgeschlagen.");
-    } finally {
-      setSyncing(false);
-    }
-  }
+  const available = Boolean(status?.reachable && connected);
 
   return (
     <>
       <PageHeader
         eyebrow="Einstellungen"
-        lead="Lokale Daten funktionieren sofort. Supabase kann über Server-Umgebungsvariablen verbunden werden."
+        lead="Supabase ist die zentrale Datenquelle. Der Browser speichert nur eine lokale Kopie für die Anzeige bei kurzen Verbindungsunterbrüchen."
         title="Verbindungen."
       />
 
@@ -67,11 +92,13 @@ export default function SettingsPage() {
             <p>
               {status === null
                 ? "Verbindung wird geprüft …"
-                : status.reachable
-                  ? "Verbunden und bereit zur Synchronisierung."
+                : available
+                  ? "Verbunden. Änderungen werden automatisch gespeichert."
+                  : status.reachable
+                    ? "Verbindung verfügbar. Lade den aktuellen Datenstand neu."
                   : status.configured
                     ? "Konfiguriert, aber nicht erreichbar."
-                    : "Noch nicht konfiguriert. Die App speichert lokal."}
+                    : "Noch nicht konfiguriert oder nicht angemeldet."}
             </p>
             {status?.error && !status.reachable ? (
               <p className={styles.error}>{status.error}</p>
@@ -79,18 +106,18 @@ export default function SettingsPage() {
           </div>
           <span
             className={ui.pill}
-            data-tone={status?.reachable ? "ready" : undefined}
+            data-tone={available ? "ready" : undefined}
           >
-            {status?.reachable ? "Verbunden" : "Lokaler Modus"}
+            {available ? "Verbunden" : "Nicht verbunden"}
           </span>
           <button
             className={`${ui.button} ${ui.primary}`}
-            disabled={!status?.reachable || syncing}
-            onClick={() => void sync()}
+            disabled={checking}
+            onClick={() => void checkConnection(true)}
             type="button"
           >
             <RefreshCw aria-hidden="true" />
-            {syncing ? "Synchronisiert …" : "Jetzt synchronisieren"}
+            {checking ? "Wird geprüft …" : "Verbindung prüfen"}
           </button>
         </article>
 
@@ -119,14 +146,16 @@ export default function SettingsPage() {
             <small>Lokale Daten</small>
             <h2>Demo zurücksetzen</h2>
             <p>
-              Entfernt deine lokalen Änderungen und lädt die Beispieldaten neu.
+              Ersetzt die in Supabase gespeicherten Inhalte durch die
+              Beispieldaten.
             </p>
           </div>
           <button
             className={`${ui.button} ${ui.danger}`}
+            disabled={!available}
             onClick={() => {
               resetDemo();
-              showToast("Die lokalen Beispieldaten wurden zurückgesetzt.");
+              showToast("Die Beispieldaten werden in Supabase gespeichert.");
             }}
             type="button"
           >

@@ -171,7 +171,10 @@ function ExportContent() {
           <strong>{selected.label} ausgewählt.</strong> {questions.length} Fragen
           aus „{quiz?.title}“. DOCX und PDF sind für den
           Forms-Schnellimport optimiert. Komplexe Formate wie Zuordnung und
-          Reihenfolge können in Forms Nacharbeit benötigen.
+          Reihenfolge können in Forms Nacharbeit benötigen. Fragebilder sind
+          eingebettet; da Forms Abbildungen beim Schnellimport auslassen kann,
+          müssen sie in der Importprüfung kontrolliert und gegebenenfalls
+          manuell ergänzt werden.
         </div>
       </section>
     </>

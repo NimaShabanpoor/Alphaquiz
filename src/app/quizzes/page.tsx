@@ -53,7 +53,11 @@ export default function QuizzesPage() {
                     <strong>{quiz.title}</strong>
                     <small>
                       {quiz.questionIds.length} Fragen ·{" "}
-                      {category?.name ?? "Ohne Kategorie"} · zuletzt{" "}
+                      {category?.name ?? "Ohne Kategorie"} ·{" "}
+                      {quiz.scoringMode === "per-topic"
+                        ? "jedes Thema bestehen"
+                        : `gesamt ab ${quiz.passPercentage} %`}{" "}
+                      · zuletzt{" "}
                       {new Date(quiz.updatedAt).toLocaleDateString("de-CH")}
                     </small>
                   </span>
@@ -87,7 +91,7 @@ export default function QuizzesPage() {
               </button>
             }
             icon={FileQuestion}
-            text="Ein Quiz bündelt Fragen und kann anschließend als Word, PDF, CSV oder JSON exportiert werden."
+            text="Ein Quiz bündelt Fragen und kann anschliessend als Word, PDF, CSV oder JSON exportiert werden."
             title="Noch kein Quiz"
           />
         )}

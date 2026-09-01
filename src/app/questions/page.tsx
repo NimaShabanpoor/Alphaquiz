@@ -1,8 +1,10 @@
 "use client";
 
 import { Check, Plus, Search, Trash2, X } from "lucide-react";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useQuizApp } from "@/components/app-provider";
+import { QuestionImageField } from "@/components/question-image-field";
 import { EmptyState, PageHeader, ui } from "@/components/ui";
 import type { QuestionType } from "@/lib/quiz-types";
 import { questionTypeLabels } from "@/lib/quiz-types";
@@ -18,22 +20,36 @@ export default function QuestionsPage() {
   } = useQuizApp();
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState("all");
+  const [topicId, setTopicId] = useState("all");
   const [selectedId, setSelectedId] = useState("");
   const selected = state.questions.find((question) => question.id === selectedId);
+  const visibleTopics =
+    categoryId === "all"
+      ? state.topics
+      : state.topics.filter((topic) => topic.categoryId === categoryId);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return state.questions.filter(
       (question) =>
         (categoryId === "all" || question.categoryId === categoryId) &&
+        (topicId === "all" || question.topicId === topicId) &&
         (!needle ||
           question.title.toLowerCase().includes(needle) ||
           question.description.toLowerCase().includes(needle)),
     );
-  }, [categoryId, query, state.questions]);
+  }, [categoryId, query, state.questions, topicId]);
 
   function startQuestion() {
+    const selectedCategoryId =
+      categoryId === "all" ? state.categories[0]?.id : categoryId;
+    const selectedTopicId =
+      topicId === "all"
+        ? state.topics.find(
+            (topic) => topic.categoryId === selectedCategoryId,
+          )?.id
+        : topicId;
     setSelectedId(
-      createQuestion(categoryId === "all" ? undefined : categoryId),
+      createQuestion(selectedCategoryId, selectedTopicId),
     );
   }
 
@@ -50,7 +66,7 @@ export default function QuestionsPage() {
           </button>
         }
         eyebrow="Fragenpool"
-        lead="Eine zentrale Sammlung – dieselbe Frage kann in mehreren Quizzes verwendet werden."
+        lead="Ordne jede Frage einer Kategorie und einem Unterthema zu. Dieselbe Frage kann in mehreren Quizzes verwendet werden."
         title="Alle Fragen."
       />
 
@@ -67,13 +83,29 @@ export default function QuestionsPage() {
         <select
           aria-label="Kategorie filtern"
           className={ui.input}
-          onChange={(event) => setCategoryId(event.target.value)}
+          onChange={(event) => {
+            setCategoryId(event.target.value);
+            setTopicId("all");
+          }}
           value={categoryId}
         >
           <option value="all">Alle Kategorien</option>
           {state.categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Unterthema filtern"
+          className={ui.input}
+          onChange={(event) => setTopicId(event.target.value)}
+          value={topicId}
+        >
+          <option value="all">Alle Unterthemen</option>
+          {visibleTopics.map((topic) => (
+            <option key={topic.id} value={topic.id}>
+              {topic.name}
             </option>
           ))}
         </select>
@@ -84,6 +116,9 @@ export default function QuestionsPage() {
           filtered.map((question) => {
             const category = state.categories.find(
               (item) => item.id === question.categoryId,
+            );
+            const topic = state.topics.find(
+              (item) => item.id === question.topicId,
             );
             return (
               <button
@@ -96,18 +131,29 @@ export default function QuestionsPage() {
                   className={styles.mark}
                   style={{ background: category?.color }}
                 >
-                  {category?.name.slice(0, 1) ?? "?"}
+                  {question.image ? (
+                    <Image
+                      alt={question.image.alt || ""}
+                      height={38}
+                      src={question.image.dataUrl}
+                      unoptimized
+                      width={48}
+                    />
+                  ) : (
+                    (category?.name.slice(0, 1) ?? "?")
+                  )}
                 </span>
                 <span className={styles.copy}>
                   <strong>{question.title}</strong>
                   <small>
                     {questionTypeLabels[question.type]} ·{" "}
                     {question.answers.length} Antworten · {question.points}{" "}
-                    Punkte
+                    Punkte {question.image ? "· mit Bild" : ""}
                   </small>
                 </span>
                 <span className={ui.pill}>
-                  {category?.name ?? "Ohne Kategorie"}
+                  {category?.name ?? "Ohne Kategorie"} ·{" "}
+                  {topic?.name ?? "Ohne Thema"}
                 </span>
               </button>
             );
@@ -140,7 +186,7 @@ export default function QuestionsPage() {
                 <h2 id="question-dialog-title">{selected.title}</h2>
               </div>
               <button
-                aria-label="Dialog schließen"
+                aria-label="Dialog schliessen"
                 className={`${ui.button} ${ui.quiet}`}
                 onClick={() => setSelectedId("")}
                 type="button"
@@ -159,6 +205,23 @@ export default function QuestionsPage() {
                   value={selected.title}
                 />
               </label>
+              <label className={ui.field}>
+                <span>Beschreibung (optional)</span>
+                <textarea
+                  className={`${ui.input} ${styles.description}`}
+                  onChange={(event) =>
+                    updateQuestion(selected.id, {
+                      description: event.target.value,
+                    })
+                  }
+                  value={selected.description}
+                />
+              </label>
+              <QuestionImageField
+                image={selected.image}
+                onChange={(image) => updateQuestion(selected.id, { image })}
+                onError={showToast}
+              />
               <div className={styles.formRow}>
                 <label className={ui.field}>
                   <span>Format</span>
@@ -184,11 +247,16 @@ export default function QuestionsPage() {
                   <span>Kategorie</span>
                   <select
                     className={ui.input}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const nextCategoryId = event.target.value;
                       updateQuestion(selected.id, {
-                        categoryId: event.target.value,
-                      })
-                    }
+                        categoryId: nextCategoryId,
+                        topicId:
+                          state.topics.find(
+                            (topic) => topic.categoryId === nextCategoryId,
+                          )?.id ?? "",
+                      });
+                    }}
                     value={selected.categoryId}
                   >
                     {state.categories.map((category) => (
@@ -196,6 +264,28 @@ export default function QuestionsPage() {
                         {category.name}
                       </option>
                     ))}
+                  </select>
+                </label>
+                <label className={ui.field}>
+                  <span>Unterthema</span>
+                  <select
+                    className={ui.input}
+                    onChange={(event) =>
+                      updateQuestion(selected.id, {
+                        topicId: event.target.value,
+                      })
+                    }
+                    value={selected.topicId}
+                  >
+                    {state.topics
+                      .filter(
+                        (topic) => topic.categoryId === selected.categoryId,
+                      )
+                      .map((topic) => (
+                        <option key={topic.id} value={topic.id}>
+                          {topic.name}
+                        </option>
+                      ))}
                   </select>
                 </label>
                 <label className={ui.field}>
@@ -251,6 +341,26 @@ export default function QuestionsPage() {
                     />
                   </div>
                 ))}
+                {selected.type !== "boolean" ? (
+                  <button
+                    className={styles.addAnswer}
+                    onClick={() =>
+                      updateQuestion(selected.id, {
+                        answers: [
+                          ...selected.answers,
+                          {
+                            id: `answer-${crypto.randomUUID()}`,
+                            text: "",
+                            correct: false,
+                          },
+                        ],
+                      })
+                    }
+                    type="button"
+                  >
+                    <Plus aria-hidden="true" /> Antwort hinzufügen
+                  </button>
+                ) : null}
               </div>
             </div>
             <div className={styles.modalActions}>

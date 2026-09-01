@@ -1,6 +1,14 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CheckCircle2, RotateCcw } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Layers3,
+  RotateCcw,
+  XCircle,
+} from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
@@ -43,22 +51,64 @@ function PreviewContent() {
     });
   }
 
-  const score = questions.reduce((total, item) => {
+  function scoreQuestion(item: (typeof questions)[number]) {
     if (item.type === "text") {
       const given = (responses[item.id]?.[0] ?? "").trim().toLowerCase();
       const correct = item.answers.some(
         (answer) =>
           answer.correct && answer.text.trim().toLowerCase() === given,
       );
-      return total + (correct ? item.points : 0);
+      return correct ? item.points : 0;
     }
     const chosen = new Set(responses[item.id] ?? []);
     const correct = item.answers.every(
       (answer) => chosen.has(answer.id) === answer.correct,
     );
-    return total + (correct ? item.points : 0);
-  }, 0);
+    return correct ? item.points : 0;
+  }
+
+  const scoredQuestions = questions.map((item) => ({
+    question: item,
+    score: scoreQuestion(item),
+  }));
+  const score = scoredQuestions.reduce((total, item) => total + item.score, 0);
   const possible = questions.reduce((total, item) => total + item.points, 0);
+  const percentage = possible ? Math.round((score / possible) * 100) : 0;
+  const topicResults = Array.from(
+    new Set(questions.map((item) => item.topicId).filter(Boolean)),
+  ).map((topicId) => {
+    const topicQuestions = scoredQuestions.filter(
+      (item) => item.question.topicId === topicId,
+    );
+    const topicScore = topicQuestions.reduce(
+      (total, item) => total + item.score,
+      0,
+    );
+    const topicPossible = topicQuestions.reduce(
+      (total, item) => total + item.question.points,
+      0,
+    );
+    const required =
+      quiz?.topicPassPercentages[topicId] ?? quiz?.passPercentage ?? 70;
+    const topicPercentage = topicPossible
+      ? Math.round((topicScore / topicPossible) * 100)
+      : 0;
+    return {
+      id: topicId,
+      name:
+        state.topics.find((topic) => topic.id === topicId)?.name ??
+        "Ohne Thema",
+      score: topicScore,
+      possible: topicPossible,
+      percentage: topicPercentage,
+      required,
+      passed: topicPercentage >= required,
+    };
+  });
+  const passed =
+    quiz?.scoringMode === "per-topic"
+      ? topicResults.length > 0 && topicResults.every((result) => result.passed)
+      : percentage >= (quiz?.passPercentage ?? 70);
 
   if (!state.quizzes.length) {
     return (
@@ -114,17 +164,52 @@ function PreviewContent() {
           />
         ) : finished ? (
           <div className={styles.result}>
-            <span>
-              <CheckCircle2 aria-hidden="true" />
+            <span data-passed={passed}>
+              {passed ? (
+                <CheckCircle2 aria-hidden="true" />
+              ) : (
+                <XCircle aria-hidden="true" />
+              )}
             </span>
             <p>Quiz abgeschlossen</p>
             <h2>
               {score} von {possible} Punkten
             </h2>
             <small>
-              Das entspricht{" "}
-              {possible ? Math.round((score / possible) * 100) : 0} %.
+              {percentage} % ·{" "}
+              <strong>{passed ? "Bestanden" : "Nicht bestanden"}</strong>
             </small>
+            <div className={styles.resultSummary}>
+              <Layers3 aria-hidden="true" />
+              <span>
+                Auswertung:{" "}
+                {quiz?.scoringMode === "per-topic"
+                  ? "Jedes Thema muss bestanden sein"
+                  : `Gesamtergebnis ab ${quiz?.passPercentage ?? 70} %`}
+              </span>
+            </div>
+            {topicResults.length ? (
+              <div className={styles.topicResults}>
+                {topicResults.map((result) => (
+                  <div key={result.id}>
+                    <span>
+                      <strong>{result.name}</strong>
+                      <small>
+                        {result.score}/{result.possible} Punkte · mindestens{" "}
+                        {result.required} %
+                      </small>
+                    </span>
+                    <span
+                      className={ui.pill}
+                      data-tone={result.passed ? "ready" : "draft"}
+                    >
+                      {result.percentage} % ·{" "}
+                      {result.passed ? "Bestanden" : "Nicht bestanden"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <button
               className={`${ui.button} ${ui.primary}`}
               onClick={() => {
@@ -151,10 +236,26 @@ function PreviewContent() {
             </div>
             <div className={styles.body}>
               <p className={styles.kicker}>
-                {questionTypeLabels[question.type]} · {question.points}{" "}
+                {state.topics.find((topic) => topic.id === question.topicId)
+                  ?.name ?? "Ohne Thema"}{" "}
+                · {questionTypeLabels[question.type]} · {question.points}{" "}
                 {question.points === 1 ? "Punkt" : "Punkte"}
               </p>
               <h2>{question.title}</h2>
+              {question.image ? (
+                <figure className={styles.questionImage}>
+                  <Image
+                    alt={question.image.alt || "Bild zur Frage"}
+                    height={520}
+                    src={question.image.dataUrl}
+                    unoptimized
+                    width={900}
+                  />
+                  {question.image.alt ? (
+                    <figcaption>{question.image.alt}</figcaption>
+                  ) : null}
+                </figure>
+              ) : null}
               <p className={styles.description}>
                 {question.description ||
                   (question.type === "multiple"
@@ -211,7 +312,7 @@ function PreviewContent() {
                   }}
                   type="button"
                 >
-                  {index === questions.length - 1 ? "Abschließen" : "Weiter"}
+                  {index === questions.length - 1 ? "Abschliessen" : "Weiter"}
                   <ArrowRight aria-hidden="true" />
                 </button>
               </div>

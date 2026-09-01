@@ -1,4 +1,16 @@
 import type { QuizState } from "@/lib/quiz-types";
+import { defaultExamRandomizationConfig } from "@/lib/exam-randomization";
+
+export const emptyQuizState: QuizState = {
+  categories: [],
+  topics: [],
+  questions: [],
+  quizzes: [],
+  exports: [],
+  examPublications: [],
+  examAttempts: [],
+  examEvents: [],
+};
 
 export const seedState: QuizState = {
   categories: [
@@ -7,6 +19,26 @@ export const seedState: QuizState = {
     { id: "cat-teams", name: "Teams", color: "#6c63a8" },
     { id: "cat-word", name: "Word", color: "#3970a3" },
   ],
+  topics: [
+    { id: "topic-excel-basics", categoryId: "cat-excel", name: "Grundlagen" },
+    {
+      id: "topic-excel-formulas",
+      categoryId: "cat-excel",
+      name: "Formeln & Funktionen",
+    },
+    {
+      id: "topic-excel-data",
+      categoryId: "cat-excel",
+      name: "Daten & Filter",
+    },
+    {
+      id: "topic-outlook-mail",
+      categoryId: "cat-outlook",
+      name: "E-Mail-Grundlagen",
+    },
+    { id: "topic-teams-basics", categoryId: "cat-teams", name: "Grundlagen" },
+    { id: "topic-word-basics", categoryId: "cat-word", name: "Grundlagen" },
+  ],
   questions: [
     {
       id: "q-1",
@@ -14,6 +46,7 @@ export const seedState: QuizState = {
       description: "",
       type: "single",
       categoryId: "cat-excel",
+      topicId: "topic-excel-basics",
       points: 1,
       shuffle: true,
       answers: [
@@ -32,6 +65,7 @@ export const seedState: QuizState = {
       description: "Mehrfachauswahl möglich.",
       type: "multiple",
       categoryId: "cat-excel",
+      topicId: "topic-excel-formulas",
       points: 2,
       shuffle: true,
       answers: [
@@ -47,6 +81,7 @@ export const seedState: QuizState = {
       description: "",
       type: "boolean",
       categoryId: "cat-excel",
+      topicId: "topic-excel-formulas",
       points: 1,
       shuffle: false,
       answers: [
@@ -60,6 +95,7 @@ export const seedState: QuizState = {
       description: "Bringe die Schritte in die richtige Reihenfolge.",
       type: "order",
       categoryId: "cat-excel",
+      topicId: "topic-excel-data",
       points: 3,
       shuffle: false,
       answers: [
@@ -75,6 +111,7 @@ export const seedState: QuizState = {
       description: "",
       type: "text",
       categoryId: "cat-excel",
+      topicId: "topic-excel-formulas",
       points: 1,
       shuffle: false,
       answers: [{ id: "a-5-1", text: "=", correct: true }],
@@ -85,6 +122,7 @@ export const seedState: QuizState = {
       description: "",
       type: "single",
       categoryId: "cat-outlook",
+      topicId: "topic-outlook-mail",
       points: 1,
       shuffle: true,
       answers: [
@@ -102,6 +140,10 @@ export const seedState: QuizState = {
       categoryId: "cat-excel",
       status: "ready",
       questionIds: ["q-1", "q-2", "q-3", "q-4", "q-5"],
+      passPercentage: 70,
+      scoringMode: "combined",
+      topicPassPercentages: {},
+      hiddenTopicIds: [],
       updatedAt: "2026-07-29T08:20:00.000Z",
     },
     {
@@ -111,8 +153,30 @@ export const seedState: QuizState = {
       categoryId: "cat-outlook",
       status: "draft",
       questionIds: ["q-6"],
+      passPercentage: 70,
+      scoringMode: "combined",
+      topicPassPercentages: {},
+      hiddenTopicIds: [],
       updatedAt: "2026-07-28T07:05:00.000Z",
     },
   ],
   exports: [],
+  examPublications: [
+    {
+      id: "exam-excel-demo",
+      quizId: "quiz-excel",
+      slug: "excel-grundlagen-demo",
+      mode: "closed",
+      timeLimit: 45,
+      maxViolations: 2,
+      active: true,
+      sendResults: true,
+      randomization: defaultExamRandomizationConfig(),
+      availableFrom: "",
+      availableUntil: "",
+      createdAt: "2026-07-29T09:00:00.000Z",
+    },
+  ],
+  examAttempts: [],
+  examEvents: [],
 };

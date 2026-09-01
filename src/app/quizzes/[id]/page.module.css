@@ -9,6 +9,80 @@
   border-radius: var(--r-card);
 }
 
+.scoring {
+  align-items: end;
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: minmax(240px, 1.4fr) minmax(170px, 0.8fr) 140px;
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-4);
+}
+
+.scoringIntro span,
+.poolHead small {
+  color: var(--muted);
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.scoringIntro h2,
+.poolHead h2 {
+  font-size: 17px;
+  margin-top: var(--sp-1);
+}
+
+.scoringIntro p {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  margin-top: var(--sp-1);
+}
+
+.percentInput {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 28px;
+}
+
+.percentInput > span {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  text-align: center;
+}
+
+.topicThresholds {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--sp-2);
+  grid-column: 1 / -1;
+  padding-top: var(--sp-3);
+}
+
+.topicThresholds > strong {
+  font-size: var(--fs-meta);
+}
+
+.topicThresholds > label {
+  align-items: center;
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: 1fr 120px;
+}
+
+.topicThresholds > label > span {
+  align-items: center;
+  display: flex;
+  font-size: var(--fs-meta);
+  gap: var(--sp-2);
+}
+
+.topicThresholds svg {
+  color: var(--amber-deep);
+  height: 13px;
+  width: 13px;
+}
+
 .editorGrid {
   align-items: start;
   display: grid;
@@ -22,6 +96,193 @@
   padding: var(--sp-2);
   position: sticky;
   top: var(--sp-4);
+}
+
+.topicListHead {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: var(--sp-2) var(--sp-2) var(--sp-3);
+}
+
+.topicListHead > span {
+  color: var(--muted);
+  font-size: var(--fs-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.topicListHead button {
+  align-items: center;
+  background: var(--amber-soft);
+  border: 0;
+  border-radius: 5px;
+  color: var(--amber-deep);
+  display: flex;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.topicListHead svg {
+  height: 14px;
+  width: 14px;
+}
+
+.topicCreator {
+  background: var(--amber-tint);
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  display: grid;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+  padding: var(--sp-2);
+}
+
+.topicCreator input {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  height: 32px;
+  min-width: 0;
+  padding: 0 var(--sp-2);
+}
+
+.topicCreator button {
+  background: var(--amber);
+  border: 0;
+  border-radius: 5px;
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  min-height: 30px;
+}
+
+.topicCreator button:disabled {
+  opacity: 0.45;
+}
+
+.hiddenTopics {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--sp-1);
+  padding-top: var(--sp-2);
+}
+
+.hiddenTopics small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.hiddenTopics button {
+  align-items: center;
+  background: transparent;
+  color: var(--amber-deep);
+  display: flex;
+  font-size: 10px;
+  gap: var(--sp-1);
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.hiddenTopics svg {
+  height: 11px;
+  width: 11px;
+}
+
+.topicGroup {
+  border-top: 1px solid var(--line-2);
+}
+
+.topicHeaderRow {
+  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+}
+
+.topicHeader {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-2);
+  text-align: left;
+  width: 100%;
+}
+
+.topicDelete {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  display: flex;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.topicDelete:hover {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.topicDelete svg {
+  height: 13px;
+  width: 13px;
+}
+
+.unassignedHeader {
+  padding: var(--sp-3) 34px;
+}
+
+.unassignedHeader > span {
+  display: grid;
+}
+
+.unassignedHeader strong {
+  font-size: var(--fs-meta);
+}
+
+.unassignedHeader small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.topicHeader:hover {
+  background: var(--amber-tint);
+}
+
+.topicHeader > svg {
+  color: var(--amber-deep);
+  flex: 0 0 auto;
+  height: 14px;
+  transition: transform 160ms ease;
+  width: 14px;
+}
+
+.topicHeader[aria-expanded="true"] > svg {
+  transform: rotate(90deg);
+}
+
+.topicHeader > span {
+  display: grid;
+  min-width: 0;
+}
+
+.topicHeader strong {
+  font-size: var(--fs-meta);
+}
+
+.topicHeader small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.topicQuestions {
+  display: grid;
+  padding-bottom: var(--sp-2);
 }
 
 .questionItem {
@@ -72,8 +333,37 @@
 }
 
 .questionItem small {
+  align-items: center;
   color: var(--muted);
+  display: flex;
   font-size: 9.5px;
+  gap: 4px;
+}
+
+.questionItem small svg {
+  height: 10px;
+  width: 10px;
+}
+
+.topicAdd {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--amber-deep);
+  display: flex;
+  font-size: 10px;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) 34px;
+  text-align: left;
+}
+
+.topicAdd:hover {
+  text-decoration: underline;
+}
+
+.topicAdd svg {
+  height: 11px;
+  width: 11px;
 }
 
 .addQuestion {
@@ -231,7 +521,138 @@
 .fieldRow {
   display: grid;
   gap: var(--sp-4);
-  grid-template-columns: 1fr 0.45fr 0.7fr;
+  grid-template-columns: 1fr 1fr 0.45fr 0.7fr;
+}
+
+.modalBackdrop {
+  align-items: center;
+  background: rgb(28 35 51 / 35%);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 60;
+}
+
+.poolModal {
+  max-height: calc(100vh - 48px);
+  max-width: min(860px, calc(100vw - 48px));
+  overflow: auto;
+  width: min(860px, 100%);
+}
+
+.poolHead {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.poolFilters {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: 1fr 210px auto;
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.poolAssignment {
+  align-items: center;
+  background: var(--amber-tint);
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: 1fr 260px;
+  padding: var(--sp-3) var(--sp-5);
+}
+
+.poolAssignment > span {
+  align-items: center;
+  color: var(--amber-deep);
+  display: flex;
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  gap: var(--sp-2);
+}
+
+.poolAssignment svg {
+  height: 14px;
+  width: 14px;
+}
+
+.poolSearch {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  display: flex;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-3);
+}
+
+.poolSearch svg {
+  color: var(--muted);
+  height: 14px;
+  width: 14px;
+}
+
+.poolSearch input {
+  border: 0;
+  height: var(--h-ctl);
+  outline: 0;
+  width: 100%;
+}
+
+.poolList {
+  border-top: 1px solid var(--line);
+  min-height: 220px;
+}
+
+.poolRow {
+  align-items: center;
+  border-bottom: 1px solid var(--line-2);
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  padding: var(--sp-3) var(--sp-5);
+}
+
+.poolRow > span:nth-child(2) {
+  display: grid;
+}
+
+.poolRow strong {
+  font-size: var(--fs-body);
+}
+
+.poolRow small {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+
+.poolMark {
+  align-items: center;
+  background: var(--amber-soft);
+  border-radius: 5px;
+  color: var(--amber-deep);
+  display: flex;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.poolThumb {
+  background: #f6f7f7;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  height: 44px;
+  object-fit: cover;
+  width: 58px;
+}
+
+.poolMark svg {
+  height: 14px;
+  width: 14px;
 }
 
 @media (max-width: 1080px) {
@@ -256,10 +677,17 @@
   }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 960px) {
   .quizMeta,
+  .scoring,
   .fieldRow,
-  .formats {
+  .formats,
+  .poolFilters,
+  .poolAssignment {
     grid-template-columns: 1fr;
+  }
+
+  .topicThresholds {
+    grid-column: auto;
   }
 }

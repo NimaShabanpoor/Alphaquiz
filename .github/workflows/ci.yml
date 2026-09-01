@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: alphaquiz_migrations
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d alphaquiz_migrations"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MIGRATION_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/alphaquiz_migrations
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply every migration to disposable PostgreSQL
+        run: npm run db:verify-migrations
+      - name: Upload resulting schema inventory
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: migration-schema-inventory
+          path: migration-schema-inventory.json
+
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci-placeholder
+      APP_ORIGIN: https://example.invalid
+      ADMIN_EMAIL: admin@example.invalid
+      RATE_LIMIT_SECRET: ci-only-secret-that-is-longer-than-32-characters
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - run: npm run build
+
+  authorization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP_ORIGIN: https://alphaquiz-security.test
+      ADMIN_EMAIL: admin@example.invalid
+      RATE_LIMIT_SECRET: ci-only-secret-that-is-longer-than-32-characters
+      SUPABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: supabase/setup-cli@v2
+        with:
+          version: 2.84.2
+      - run: npm ci
+      - name: Start disposable Supabase stack and apply baseline
+        run: supabase start
+      - name: Export disposable Supabase connection values
+        shell: bash
+        run: |
+          supabase status -o env \
+            --override-name api.url=NEXT_PUBLIC_SUPABASE_URL \
+            --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY \
+            --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
+            | sed -E 's/^([^=]+)="(.*)"$/\1=\2/' \
+            >> "$GITHUB_ENV"
+      - run: npm run build
+      - name: Run unit and authorization tests
+        run: npm test
+      - name: Self-test Supabase RLS audit
+        env:
+          RLS_AUDIT_SELF_TEST: "1"
+        run: npm run db:audit-rls:self-test
+      - name: Audit RLS on disposable Supabase database
+        run: npm run db:audit-rls
+      - name: Stop disposable Supabase stack
+        if: always()
+        run: supabase stop --no-backup

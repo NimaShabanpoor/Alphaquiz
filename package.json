@@ -2,11 +2,22 @@
   "name": "alphaquiz",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:unit && npm run test:authorization",
+    "test:unit": "tsx --test tests/**/*.test.ts",
+    "test:authorization": "tsx --test tests/security-authorization.integration.ts",
+    "db:verify-migrations": "node scripts/verify-migrations.mjs",
+    "db:audit-rls": "node scripts/audit-rls.mjs",
+    "db:audit-rls:self-test": "node scripts/self-test-audit-rls.mjs",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
     "db:setup": "node scripts/setup-supabase.mjs"
   },
   "dependencies": {
@@ -17,16 +28,20 @@
     "mdb-reader": "^3.2.0",
     "next": "16.2.12",
     "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "pg": "^8.22.0",
+    "tsx": "^4.23.1",
     "typescript": "^5"
   },
   "overrides": {

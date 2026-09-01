@@ -1,4 +1,6 @@
 :root {
+  --font-sans: Inter, "Segoe UI", Arial, sans-serif;
+  --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
   --amber: #e8a33c;
   --amber-deep: #b8791a;
   --amber-soft: #fcf3e3;
@@ -74,6 +76,11 @@ button {
   cursor: pointer;
 }
 
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #8b5b12;
+  outline-offset: 3px;
+}
+
 button,
 input,
 select,
@@ -99,4 +106,19 @@ h3 {
 ::selection {
   background: var(--amber-soft);
   color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
