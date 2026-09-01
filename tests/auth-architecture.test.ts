@@ -33,6 +33,12 @@ const protectedRouteHandlers = [
 const authRouteHandlers = ["login", "logout", "reset"].map((route) =>
   resolve(projectRoot, `src/app/api/auth/${route}/route.ts`),
 );
+const allowedAuthServiceRoleConsumers = [
+  "src/lib/rate-limit.ts",
+  "src/app/api/auth/login/route.ts",
+  "src/app/api/auth/reset/route.ts",
+] as const;
+const allowedDirectAuthServiceRoleConsumers = ["src/lib/rate-limit.ts"] as const;
 
 test("Supabase SSR verwendet getrennte Browser- und Server-Clients", () => {
   const browserClient = readProjectFile("src/lib/supabase/client.ts");
@@ -77,10 +83,11 @@ test("geschützte Route Handler prüfen die Session selbst mit getUser", () => {
   }
 });
 
-test("Auth-Endpunkte verwenden nie den Service-Role-Client", () => {
+test("Auth-Endpunkte erreichen die Service Role nur über das Rate-Limit", () => {
   assertServiceRoleAllowlist({
     projectRoot,
-    allowedConsumers: [],
+    allowedConsumers: allowedAuthServiceRoleConsumers,
+    allowedDirectConsumers: allowedDirectAuthServiceRoleConsumers,
     entryFiles: authRouteHandlers,
   });
 
@@ -105,7 +112,8 @@ test("Auth-Service-Role-Wächter beweist seinen Fehlerfall", () => {
       () =>
         assertServiceRoleAllowlist({
           projectRoot,
-          allowedConsumers: [],
+          allowedConsumers: allowedAuthServiceRoleConsumers,
+          allowedDirectConsumers: allowedDirectAuthServiceRoleConsumers,
           entryFiles: [...authRouteHandlers, forbiddenRoute],
         }),
       (error: unknown) =>
@@ -118,7 +126,8 @@ test("Auth-Service-Role-Wächter beweist seinen Fehlerfall", () => {
 
   assertServiceRoleAllowlist({
     projectRoot,
-    allowedConsumers: [],
+    allowedConsumers: allowedAuthServiceRoleConsumers,
+    allowedDirectConsumers: allowedDirectAuthServiceRoleConsumers,
     entryFiles: authRouteHandlers,
   });
 });

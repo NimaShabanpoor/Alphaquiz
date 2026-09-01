@@ -66,6 +66,7 @@ test("RLS-Audit prüft Grants, Policy-Rollen und echte Anon-Abfragen", () => {
   const audit = readProjectFile("scripts/audit-rls.mjs");
 
   assert.match(audit, /information_schema\.role_table_grants/);
+  assert.match(audit, /information_schema\.role_routine_grants/);
   assert.match(audit, /grantee = 'anon'/);
   assert.match(audit, /policy\.polroles::regrole\[\]::text\[\]/);
   assert.match(audit, /\["anon", "public", "0"\]/);
@@ -74,7 +75,7 @@ test("RLS-Audit prüft Grants, Policy-Rollen und echte Anon-Abfragen", () => {
   assert.match(audit, /\.from\(table\.name\)\.select\("\*"\)\.limit\(1\)/);
 });
 
-test("RLS-Audit beweist seine fünf Fehlerklassen vor dem echten Lauf", () => {
+test("RLS-Audit beweist seine sechs Fehlerklassen vor dem echten Lauf", () => {
   const selfTest = readProjectFile("scripts/self-test-audit-rls.mjs");
   const workflow = readProjectFile(".github/workflows/ci.yml");
   const packageJson = readProjectFile("package.json");
@@ -84,7 +85,8 @@ test("RLS-Audit beweist seine fünf Fehlerklassen vor dem echten Lauf", () => {
   assert.match(selfTest, /for select to anon/);
   assert.match(selfTest, /grant select on table[\s\S]*to anon/);
   assert.match(selfTest, /__alphaquiz_audit_unindexed/);
-  assert.match(selfTest, /5 von 5 erkannt/);
+  assert.match(selfTest, /__alphaquiz_audit_anon_function/);
+  assert.match(selfTest, /6 von 6 erkannt/);
   assert.match(packageJson, /"db:audit-rls:self-test"/);
   assert.ok(
     workflow.indexOf("npm run db:audit-rls:self-test") <

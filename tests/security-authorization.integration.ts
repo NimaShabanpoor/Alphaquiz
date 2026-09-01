@@ -805,6 +805,15 @@ test("anon kann aus public-Tabellen nicht löschen", async () => {
   assert.ok(error);
 });
 
+test("F9: anon kann den Rate-Limit-RPC nicht direkt aufrufen", async () => {
+  const { error } = await anonClient.rpc("consume_rate_limit", {
+    p_key_hash: "0".repeat(64),
+    p_limit: 1,
+    p_window_seconds: 60,
+  });
+  assert.ok(error);
+});
+
 for (const [name, path, method, body] of unauthenticatedEndpoints) {
   test(`e) Nicht-Admin erhält bei ${name} 403`, async () => {
     const response = await request(

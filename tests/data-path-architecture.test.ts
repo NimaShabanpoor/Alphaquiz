@@ -19,6 +19,22 @@ const projectRoot = resolve(import.meta.dirname, "..");
 const readProjectFile = (path: string) =>
   readFileSync(resolve(projectRoot, path), "utf8");
 
+const allowedServiceRoleConsumers = [
+  "src/lib/rate-limit.ts",
+  "src/app/api/auth/login/route.ts",
+  "src/app/api/auth/reset/route.ts",
+  "src/app/api/exam-results/send/route.ts",
+  "src/app/api/export/route.ts",
+  "src/app/api/import/route.ts",
+  "src/app/api/public/exam-attempts/[attemptId]/route.ts",
+  "src/app/api/public/exams/[slug]/route.ts",
+] as const;
+const allowedDirectServiceRoleConsumers = [
+  "src/lib/rate-limit.ts",
+  "src/app/api/public/exam-attempts/[attemptId]/route.ts",
+  "src/app/api/public/exams/[slug]/route.ts",
+] as const;
+
 function listTypeScriptFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -51,13 +67,11 @@ test("Admin-Datenzugriffe verwenden den request-scoped User-Client", () => {
   }
 });
 
-test("Service Role bleibt auf die zwei öffentlichen Prüfungsendpunkte begrenzt", () => {
+test("Service Role bleibt auf Prüfungsendpunkte und Rate-Limits begrenzt", () => {
   assertServiceRoleAllowlist({
     projectRoot,
-    allowedConsumers: [
-      "src/app/api/public/exam-attempts/[attemptId]/route.ts",
-      "src/app/api/public/exams/[slug]/route.ts",
-    ],
+    allowedConsumers: allowedServiceRoleConsumers,
+    allowedDirectConsumers: allowedDirectServiceRoleConsumers,
   });
 });
 
@@ -78,10 +92,8 @@ test("Service-Role-Wächter erkennt dynamische und transitive Umgehungen", () =>
       () =>
         assertServiceRoleAllowlist({
           projectRoot,
-          allowedConsumers: [
-            "src/app/api/public/exam-attempts/[attemptId]/route.ts",
-            "src/app/api/public/exams/[slug]/route.ts",
-          ],
+          allowedConsumers: allowedServiceRoleConsumers,
+          allowedDirectConsumers: allowedDirectServiceRoleConsumers,
           entryFiles: [
             ...listTypeScriptFiles(resolve(projectRoot, "src")),
             consumer,
@@ -98,10 +110,8 @@ test("Service-Role-Wächter erkennt dynamische und transitive Umgehungen", () =>
 
   assertServiceRoleAllowlist({
     projectRoot,
-    allowedConsumers: [
-      "src/app/api/public/exam-attempts/[attemptId]/route.ts",
-      "src/app/api/public/exams/[slug]/route.ts",
-    ],
+    allowedConsumers: allowedServiceRoleConsumers,
+    allowedDirectConsumers: allowedDirectServiceRoleConsumers,
   });
 });
 

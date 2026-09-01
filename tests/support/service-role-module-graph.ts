@@ -129,7 +129,10 @@ function serviceRoleConsumers(graph: ModuleGraph, target: string) {
       pending.push(consumer);
     }
   }
-  return consumers;
+  return {
+    consumers,
+    directConsumers: reverseGraph.get(normalizedTarget) ?? new Set<string>(),
+  };
 }
 
 function displayPath(projectRoot: string, path: string) {
@@ -142,6 +145,7 @@ function displayPath(projectRoot: string, path: string) {
 export function assertServiceRoleAllowlist(options: {
   projectRoot: string;
   allowedConsumers: readonly string[];
+  allowedDirectConsumers?: readonly string[];
   entryFiles?: readonly string[];
 }) {
   const projectRoot = normalizePath(options.projectRoot);
@@ -152,14 +156,33 @@ export function assertServiceRoleAllowlist(options: {
   const allowed = new Set(
     options.allowedConsumers.map((path) => normalizePath(resolve(projectRoot, path))),
   );
-  const unexpected = [...serviceRoleConsumers(graph, target)]
+  const allowedDirect = new Set(
+    (options.allowedDirectConsumers ?? options.allowedConsumers).map((path) =>
+      normalizePath(resolve(projectRoot, path)),
+    ),
+  );
+  const { consumers, directConsumers } = serviceRoleConsumers(graph, target);
+  const unexpected = [...consumers]
     .filter((path) => !allowed.has(path))
     .map((path) => displayPath(projectRoot, path))
     .sort();
+  const unexpectedDirect = [...directConsumers]
+    .filter((path) => !allowedDirect.has(path))
+    .map((path) => displayPath(projectRoot, path))
+    .sort();
 
-  if (unexpected.length > 0) {
+  if (unexpected.length > 0 || unexpectedDirect.length > 0) {
     throw new Error(
-      `Nicht erlaubte transitive Service-Role-Nutzung:\n${unexpected.join("\n")}`,
+      [
+        unexpected.length > 0
+          ? `Nicht erlaubte transitive Service-Role-Nutzung:\n${unexpected.join("\n")}`
+          : "",
+        unexpectedDirect.length > 0
+          ? `Nicht erlaubter direkter Service-Role-Import:\n${unexpectedDirect.join("\n")}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
     );
   }
 }

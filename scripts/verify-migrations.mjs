@@ -39,6 +39,7 @@ const migrationFiles = (await readdir(migrationsDirectory))
 const client = new Client({ connectionString, ssl: false });
 const results = [];
 const verificationFailures = [];
+let baselineInventory;
 
 const comparedSections = [
   "tables",
@@ -163,6 +164,11 @@ try {
     try {
       await client.query(await readFile(resolve(migrationsDirectory, file), "utf8"));
       results.push({ Migration: file, Status: "OK", Code: "", Fehler: "" });
+      if (file === "00000000000000_baseline.sql") {
+        baselineInventory = withoutSupabasePlatformObjects(
+          await collectSchemaInventory(client),
+        );
+      }
     } catch (error) {
       await client.query("rollback").catch(() => undefined);
       results.push({
@@ -184,7 +190,7 @@ try {
   const referenceInventory = JSON.parse(
     await readFile(referenceInventoryPath, "utf8"),
   );
-  const differences = compareInventory(referenceInventory, inventory);
+  const differences = compareInventory(referenceInventory, baselineInventory ?? {});
   if (differences.length > 0) {
     console.error("\nSchema-Abweichungen zwischen Dev und Baseline:");
     console.table(differences);

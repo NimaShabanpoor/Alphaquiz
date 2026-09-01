@@ -1,8 +1,7 @@
 import "server-only";
 
 import { createHash, createHmac } from "node:crypto";
-import { createClient } from "@supabase/supabase-js";
-import { getSupabasePublicConfig } from "@/lib/supabase/config";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export type RateLimitResult = {
   allowed: boolean;
@@ -123,10 +122,10 @@ async function checkRateLimitKey(
   windowMs: number,
 ): Promise<RateLimitResult> {
   try {
-    const { url, publishableKey } = getSupabasePublicConfig();
-    const client = createClient(url, publishableKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const { client, error: configurationError } = getSupabaseAdmin();
+    if (!client) {
+      throw new Error(configurationError ?? "Supabase ist nicht konfiguriert.");
+    }
     const { data, error } = await client.rpc("consume_rate_limit", {
       p_key_hash: key,
       p_limit: limit,
