@@ -21,7 +21,7 @@
     "db:setup": "node scripts/setup-supabase.mjs"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.4",
+    "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.111.0",
     "docx": "^9.7.1",
     "lucide-react": "^1.27.0",
