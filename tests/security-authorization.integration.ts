@@ -1045,6 +1045,67 @@ test("F12: für ein fremdes Prüfungsresultat wird keine E-Mail ausgelöst", asy
   assert.equal(stored.data.resultEmailStatus, "pending");
 });
 
+test("F10: Seiten erhalten eine nonce-basierte Report-Only-CSP", async () => {
+  const response = await request("/login");
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Content-Security-Policy"), null);
+
+  const policy = response.headers.get("Content-Security-Policy-Report-Only");
+  assert.ok(policy);
+  const scriptDirective = policy
+    .split("; ")
+    .find((directive) => directive.startsWith("script-src"));
+  assert.ok(scriptDirective);
+  assert.doesNotMatch(scriptDirective, /'unsafe-inline'/);
+  assert.match(scriptDirective, /'strict-dynamic'/);
+  assert.match(policy, /report-to alphaquiz-csp/);
+  assert.match(
+    response.headers.get("Reporting-Endpoints") ?? "",
+    /alphaquiz-csp=/,
+  );
+
+  const nonce = scriptDirective.match(/'nonce-([^']+)'/)?.[1];
+  assert.ok(nonce);
+  const html = await response.text();
+  assert.match(html, new RegExp(`nonce=["']${nonce}["']`));
+});
+
+test("F10: der öffentliche CSP-Meldeendpunkt wird gedrosselt", async () => {
+  const address = `198.51.100.${Math.floor(Math.random() * 30) + 220}`;
+  const body = JSON.stringify({
+    "csp-report": {
+      "document-uri": `${baseUrl}/login?secret=removed`,
+      "blocked-uri": "https://attacker.example/script.js?token=removed",
+      "effective-directive": "script-src-elem",
+      disposition: "report",
+      "status-code": 200,
+    },
+  });
+
+  for (let index = 0; index < 20; index += 1) {
+    const response = await request("/api/security/csp-report", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/csp-report",
+        "x-vercel-forwarded-for": address,
+      },
+      body,
+    });
+    assert.equal(response.status, 204);
+  }
+
+  const blocked = await request("/api/security/csp-report", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/csp-report",
+      "x-vercel-forwarded-for": address,
+    },
+    body,
+  });
+  assert.equal(blocked.status, 429);
+  assert.ok(Number(blocked.headers.get("Retry-After")) > 0);
+});
+
 test("g) ein Prüfungsversuch ohne Token liefert keine Prüfungsdaten", async () => {
   const response = await fetch(
     `${baseUrl}/api/public/exam-attempts/${ids.attempt}`,

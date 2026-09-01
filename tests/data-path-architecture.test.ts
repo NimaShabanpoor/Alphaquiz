@@ -28,6 +28,7 @@ const allowedServiceRoleConsumers = [
   "src/app/api/import/route.ts",
   "src/app/api/public/exam-attempts/[attemptId]/route.ts",
   "src/app/api/public/exams/[slug]/route.ts",
+  "src/app/api/security/csp-report/route.ts",
 ] as const;
 const allowedDirectServiceRoleConsumers = [
   "src/lib/rate-limit.ts",

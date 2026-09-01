@@ -1,11 +1,41 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  createContentSecurityPolicy,
+  CSP_REPORT_GROUP,
+  CSP_REPORT_PATH,
+} from "@/lib/content-security-policy";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
 const SESSION_HEADER_NAMES = ["cache-control", "expires", "pragma"] as const;
+const PROTECTED_PAGE_ROOTS = [
+  "/quizzes",
+  "/questions",
+  "/categories",
+  "/exams",
+  "/exam-activity",
+  "/exam-results",
+  "/import",
+  "/export",
+  "/preview",
+  "/settings",
+] as const;
 
-async function refreshSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+function isProtectedPage(pathname: string) {
+  return (
+    pathname === "/" ||
+    PROTECTED_PAGE_ROOTS.some(
+      (root) => pathname === root || pathname.startsWith(`${root}/`),
+    )
+  );
+}
+
+function createPageResponse(requestHeaders: Headers) {
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+
+async function refreshSession(request: NextRequest, requestHeaders: Headers) {
+  let response = createPageResponse(requestHeaders);
 
   try {
     const { url, publishableKey } = getSupabasePublicConfig();
@@ -19,7 +49,8 @@ async function refreshSession(request: NextRequest) {
             request.cookies.set(name, value);
           }
 
-          response = NextResponse.next({ request });
+          requestHeaders.set("cookie", request.cookies.toString());
+          response = createPageResponse(requestHeaders);
           for (const { name, value, options } of cookiesToSet) {
             response.cookies.set(name, value, options);
           }
@@ -53,27 +84,73 @@ function redirectToLogin(request: NextRequest, sessionResponse: NextResponse) {
   return redirect;
 }
 
+function applyContentSecurityPolicy(
+  response: NextResponse,
+  policy: string,
+  reportEndpoint: string,
+) {
+  response.headers.set("Content-Security-Policy-Report-Only", policy);
+  response.headers.set(
+    "Reporting-Endpoints",
+    `${CSP_REPORT_GROUP}="${reportEndpoint}"`,
+  );
+  response.headers.set(
+    "Report-To",
+    JSON.stringify({
+      group: CSP_REPORT_GROUP,
+      max_age: 10_886_400,
+      endpoints: [{ url: reportEndpoint }],
+      include_subdomains: true,
+    }),
+  );
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
-  const session = await refreshSession(request);
-  if (session.authenticated) return session.response;
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const policy = createContentSecurityPolicy(
+    nonce,
+    process.env.NODE_ENV !== "production",
+  );
+  const reportEndpoint = new URL(CSP_REPORT_PATH, request.url).toString();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy-Report-Only", policy);
+
+  if (!isProtectedPage(request.nextUrl.pathname)) {
+    return applyContentSecurityPolicy(
+      createPageResponse(requestHeaders),
+      policy,
+      reportEndpoint,
+    );
+  }
+
+  const session = await refreshSession(request, requestHeaders);
+  if (session.authenticated) {
+    return applyContentSecurityPolicy(
+      session.response,
+      policy,
+      reportEndpoint,
+    );
+  }
 
   // This is an optimistic UX redirect only. Every protected Route Handler
   // performs its own server-side getUser() verification through requireAdmin.
-  return redirectToLogin(request, session.response);
+  return applyContentSecurityPolicy(
+    redirectToLogin(request, session.response),
+    policy,
+    reportEndpoint,
+  );
 }
 
 export const config = {
   matcher: [
-    "/",
-    "/quizzes/:path*",
-    "/questions/:path*",
-    "/categories/:path*",
-    "/exams/:path*",
-    "/exam-activity/:path*",
-    "/exam-results/:path*",
-    "/import/:path*",
-    "/export/:path*",
-    "/preview/:path*",
-    "/settings/:path*",
+    {
+      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };

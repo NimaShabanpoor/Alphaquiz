@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+import { createContentSecurityPolicy } from "../src/lib/content-security-policy";
 
 // Architekturhinweise: Reine Quelltextprüfungen in dieser Datei dokumentieren
 // Sicherheitsregeln, beweisen aber kein Laufzeitverhalten. Tests, die einen
@@ -24,12 +25,30 @@ test("Passwort-Redirect und Mutationen verwenden die feste APP_ORIGIN", () => {
   assert.match(appOrigin, /url\.protocol !== "https:"/);
 });
 
-test("CSP läuft vor der Durchsetzung im Report-Only-Modus", () => {
-  const config = readProjectFile("next.config.ts");
-  assert.match(config, /Content-Security-Policy-Report-Only/);
-  assert.doesNotMatch(config, /key: "Content-Security-Policy",/);
-  assert.match(config, /frame-ancestors 'none'/);
-  assert.match(config, /object-src 'none'/);
+test("Nonce-CSP meldet Verstösse im Report-Only-Modus", () => {
+  const productionPolicy = createContentSecurityPolicy("test-nonce", false);
+  const developmentPolicy = createContentSecurityPolicy("test-nonce", true);
+  const scriptDirective = productionPolicy
+    .split("; ")
+    .find((directive) => directive.startsWith("script-src"));
+  const proxy = readProjectFile("src/proxy.ts");
+  const reportRoute = readProjectFile("src/app/api/security/csp-report/route.ts");
+
+  assert.ok(scriptDirective);
+  assert.match(scriptDirective, /'nonce-test-nonce'/);
+  assert.match(scriptDirective, /'strict-dynamic'/);
+  assert.doesNotMatch(scriptDirective, /'unsafe-inline'/);
+  assert.doesNotMatch(productionPolicy, /'unsafe-eval'/);
+  assert.match(developmentPolicy, /'unsafe-eval'/);
+  assert.match(productionPolicy, /frame-ancestors 'none'/);
+  assert.match(productionPolicy, /object-src 'none'/);
+  assert.match(productionPolicy, /report-to alphaquiz-csp/);
+  assert.match(productionPolicy, /report-uri \/api\/security\/csp-report/);
+  assert.match(proxy, /Content-Security-Policy-Report-Only/);
+  assert.match(proxy, /Reporting-Endpoints/);
+  assert.match(proxy, /"x-nonce"/);
+  assert.match(reportRoute, /await checkRateLimit\(/);
+  assert.match(reportRoute, /\[AlphaQuiz CSP\] Report-Only-Verstoss/);
 });
 
 test("Rate-Limit-Schlüssel werden vor dem atomaren RPC-Aufruf gehasht", () => {
