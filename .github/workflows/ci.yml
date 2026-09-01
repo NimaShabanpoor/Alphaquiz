@@ -41,7 +41,7 @@ jobs:
         run: npm run db:verify-migrations
       - name: Upload resulting schema inventory
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: migration-schema-inventory
           path: migration-schema-inventory.json
