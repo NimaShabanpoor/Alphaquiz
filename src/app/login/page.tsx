@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import styles from "./page.module.css";
 
@@ -30,7 +29,6 @@ function LoginBrand() {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,8 +50,7 @@ export default function LoginPage() {
       if (!response.ok) {
         throw new Error(result.error || "Anmeldung fehlgeschlagen.");
       }
-      router.push("/");
-      router.refresh();
+      window.location.replace("/");
     } catch (error) {
       setFeedback({
         tone: "error",
