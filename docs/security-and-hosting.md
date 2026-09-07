@@ -102,6 +102,13 @@ Vor der Freigabe müssen Produktions-, Preview- und Entwicklungsvariablen
 getrennt gesetzt sein. Preview-Deployments dürfen weder den produktiven
 Service-Role-Key noch echte Prüfungsdaten erhalten.
 
+Ein Push auf `main` erzeugt durch die Vercel-Git-Integration wieder ein
+Production-Deployment, auch wenn der bisherige Projekt-Alias entfernt wurde.
+Vor der echten Freigabe müssen deshalb zuerst alle erforderlichen
+Production-Environment-Variablen gesetzt und geprüft sein. Das Entfernen eines
+Alias deaktiviert die Git-Integration nicht. Änderungen vor der Freigabe über
+einen separaten Branch als Preview prüfen.
+
 ## Hostpoint
 
 Die App erzeugt mit `output: "standalone"` einen portablen Node.js-Server.

@@ -141,10 +141,15 @@ export async function collectSchemaInventory(client) {
 export function withoutSupabasePlatformObjects(inventory) {
   return {
     ...inventory,
-    functions: inventory.functions.filter(
-      (entry) =>
-        !(entry.schema === "public" && entry.name === "rls_auto_enable"),
-    ),
+    functions: inventory.functions
+      .filter(
+        (entry) =>
+          !(entry.schema === "public" && entry.name === "rls_auto_enable"),
+      )
+      .map((entry) => ({
+        ...entry,
+        definition: entry.definition.replace(/\r\n?/g, "\n"),
+      })),
   };
 }
 
