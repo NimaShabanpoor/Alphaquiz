@@ -1,4 +1,5 @@
 import "server-only";
+import { readExamSnapshot } from "@/lib/exam-snapshot";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeExamPublication } from "@/lib/exam-data";
@@ -6,7 +7,6 @@ import type {
   Answer,
   ExamAttempt,
   ExamEvent,
-  ExamInstance,
   Question,
   Quiz,
   QuizState,
@@ -29,7 +29,7 @@ export async function loadExamActivity(client: SupabaseClient) {
   const instanceByAttempt = new Map(
     (instanceResult.data ?? []).map((row) => [
       String(row.attemptId),
-      row.snapshot as ExamInstance,
+      readExamSnapshot(row.snapshot),
     ]),
   );
   const attempts: ExamAttempt[] = (attemptResult.data ?? []).map((row) => ({

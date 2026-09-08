@@ -5,6 +5,7 @@ import type {
   Quiz,
   Topic,
 } from "@/lib/quiz-types";
+import { readExamSnapshot } from "@/lib/exam-snapshot";
 import {
   QUIZ_ALL_QUESTIONS_TOPIC_ID,
   QUIZ_UNASSIGNED_TOPIC_ID,
@@ -19,7 +20,6 @@ export type RandomizationValidationError = {
 export type GenerateExamInstanceInput = {
   attemptId: string;
   publicationId: string;
-  studentKey: string;
   quiz: Quiz;
   questions: Question[];
   topics: Topic[];
@@ -264,7 +264,6 @@ function orderSelectedQuestions(
 export function generateExamInstance({
   attemptId,
   publicationId,
-  studentKey,
   quiz,
   questions,
   topics,
@@ -306,12 +305,11 @@ export function generateExamInstance({
     ),
   );
 
-  return {
+  return readExamSnapshot({
     id: `instance-${attemptId}`,
     publicationId,
     quizId: quiz.id,
     attemptId,
-    studentKey,
     quizSnapshot: {
       ...quiz,
       questionIds: [...quiz.questionIds],
@@ -339,20 +337,19 @@ export function generateExamInstance({
       requiredQuestionIds: [...config.requiredQuestionIds],
       lockedQuestionIds: [...config.lockedQuestionIds],
     },
-  };
+  });
 }
 
 export function reuseExamInstance(
   previous: ExamInstance,
   attemptId: string,
-  studentKey: string,
   generatedAt = new Date().toISOString(),
 ): ExamInstance {
+  previous = readExamSnapshot(previous);
   return {
     ...previous,
     id: `instance-${attemptId}`,
     attemptId,
-    studentKey,
     generatedAt,
     previousAttemptId: previous.attemptId,
     questions: previous.questions.map((question) => ({

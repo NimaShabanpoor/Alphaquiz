@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readExamSnapshot } from "../src/lib/exam-snapshot";
+import { calculateExamInstanceResult } from "../src/lib/exam-scoring";
 import {
   defaultExamRandomizationConfig,
   generateExamInstance,
@@ -87,7 +89,6 @@ function generate(
   return generateExamInstance({
     attemptId,
     publicationId: "publication",
-    studentKey: "student@example.com",
     quiz,
     questions,
     topics,
@@ -245,7 +246,7 @@ test("Fortsetzen verwendet die gespeicherte Instanz", () => {
   const first = generate(
     config({ questionOrderMode: "shuffle-all", shuffleAnswers: true }),
   );
-  const restored = JSON.parse(JSON.stringify(first)) as typeof first;
+  const restored = readExamSnapshot(JSON.parse(JSON.stringify(first)));
   assert.deepEqual(restored.questionOrder, first.questionOrder);
   assert.deepEqual(
     restored.answerOrderByQuestionId,
@@ -264,7 +265,6 @@ test("neuer Versuch kann dieselbe Auswahl wiederverwenden", () => {
   const next = reuseExamInstance(
     first,
     "attempt-2",
-    "student@example.com",
     "2026-07-30T09:00:00.000Z",
   );
   assert.deepEqual(next.questionOrder, first.questionOrder);
@@ -330,4 +330,32 @@ test("nachträgliche Quizänderungen verändern die Instanz nicht", () => {
   assert.notDeepEqual(instance.questionOrder, quiz.questionIds);
   questions[0].title = "Frage a1";
   quiz.questionIds.reverse();
+});
+
+test("Snapshot-Allowlist entfernt alte Identitätsfelder ohne Bewertungs- oder Reihenfolgeänderung", () => {
+  const original = generate(config({ questionOrderMode: "shuffle-all", shuffleAnswers: true }));
+  const legacy = {
+    ...original, studentKey: "candidate@example.test", email: "candidate@example.test", name: "Candidate",
+    quizSnapshot: { ...original.quizSnapshot, email: "candidate@example.test" },
+    questions: original.questions.map((q) => ({
+      ...q, name: "Candidate", answers: q.answers.map((a) => ({ ...a, email: "candidate@example.test" })),
+    })),
+    configSnapshot: { ...original.configSnapshot, studentKey: "candidate@example.test" },
+  };
+  const restored = readExamSnapshot(JSON.parse(JSON.stringify(legacy)));
+  const expectedStoredOriginal = JSON.parse(JSON.stringify(original));
+  assert.deepEqual(restored, expectedStoredOriginal);
+  const responses = { a1: ["a1-a"], b1: ["b1-b"] };
+  assert.deepEqual(calculateExamInstanceResult(restored, responses), calculateExamInstanceResult(original, responses));
+  const reused = reuseExamInstance(legacy, "next-attempt", "2026-09-07T12:00:00Z");
+  assert.deepEqual(reused.questionOrder, original.questionOrder);
+  assert.deepEqual(reused.answerOrderByQuestionId, original.answerOrderByQuestionId);
+  assert.deepEqual(calculateExamInstanceResult(reused, responses), calculateExamInstanceResult(original, responses));
+  assert.doesNotMatch(JSON.stringify(reused), /"(?:studentKey|email|name)":/);
+});
+
+test("ungültiger Snapshot wird ohne Identitätsdaten in der Fehlermeldung abgewiesen", () => {
+  assert.throws(() => readExamSnapshot({ email: "candidate@example.test" }), {
+    message: "Der gespeicherte Prüfungsstand ist ungültig.",
+  });
 });

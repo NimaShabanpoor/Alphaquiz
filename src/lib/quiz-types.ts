@@ -113,7 +113,6 @@ export type ExamInstance = {
   publicationId: string;
   quizId: string;
   attemptId: string;
-  studentKey: string;
   quizSnapshot: Quiz;
   questions: Question[];
   questionOrder: string[];

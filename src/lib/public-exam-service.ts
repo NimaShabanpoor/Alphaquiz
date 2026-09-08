@@ -1,4 +1,5 @@
 import "server-only";
+import { readExamSnapshot } from "@/lib/exam-snapshot";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { calculateExamInstanceResult } from "@/lib/exam-scoring";
@@ -24,7 +25,7 @@ export async function loadStoredAttempt(
   if (!attemptResult.data || !instanceResult.data?.snapshot) return null;
   return {
     attempt: attemptResult.data as StoredExamAttempt,
-    instance: instanceResult.data.snapshot as ExamInstance,
+    instance: readExamSnapshot(instanceResult.data.snapshot),
   };
 }
 

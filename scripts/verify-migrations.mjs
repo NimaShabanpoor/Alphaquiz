@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Client } from "pg";
+import { snapshotMigration, seedLegacySnapshot, verifyLegacySnapshotCleanup } from "./snapshot-migration-probe.mjs";
 import {
   collectSchemaInventory,
   printSchemaInventorySummary,
@@ -162,7 +163,9 @@ try {
 
   for (const file of migrationFiles) {
     try {
+      if (file === snapshotMigration) await seedLegacySnapshot(client);
       await client.query(await readFile(resolve(migrationsDirectory, file), "utf8"));
+      if (file === snapshotMigration) await verifyLegacySnapshotCleanup(client);
       results.push({ Migration: file, Status: "OK", Code: "", Fehler: "" });
       if (file === "00000000000000_baseline.sql") {
         baselineInventory = withoutSupabasePlatformObjects(

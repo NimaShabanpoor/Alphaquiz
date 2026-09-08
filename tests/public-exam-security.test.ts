@@ -38,7 +38,6 @@ function createInstance(questions: Question[] = [question]) {
   return generateExamInstance({
     attemptId: "attempt-security",
     publicationId: "publication-security",
-    studentKey: "student@example.com",
     quiz: { ...quiz, questionIds: questions.map((item) => item.id) },
     questions,
     topics: [],

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { generateExamInstance, defaultExamRandomizationConfig } from "../src/lib/exam-randomization";
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -566,11 +567,25 @@ before(async () => {
     attemptId: ids.attempt,
     publicationId: ids.publication,
     quizId: ids.quiz,
-    studentKey: `fixture-${runId}@example.invalid`,
     questionOrder: [ids.question],
     topicOrder: [ids.topic],
     answerOrderByQuestionId: { [ids.question]: [ids.answer] },
-    snapshot: {},
+    snapshot: generateExamInstance({
+      attemptId: ids.attempt, publicationId: ids.publication,
+      quiz: {
+        id: ids.quiz, title: "Security quiz", description: "", categoryId: ids.category,
+        status: "ready", questionIds: [ids.question], passPercentage: 70,
+        scoringMode: "combined", topicPassPercentages: {}, hiddenTopicIds: [],
+        updatedAt: new Date().toISOString(),
+      },
+      questions: [{
+        id: ids.question, title: "Security question", description: "", type: "single",
+        categoryId: ids.category, topicId: ids.topic, points: 1, shuffle: true,
+        answers: [{ id: ids.answer, text: "Secret correct answer", correct: true }],
+      }],
+      topics: [{ id: ids.topic, categoryId: ids.category, name: "Security topic" }],
+      config: defaultExamRandomizationConfig(), seed: "fixture-seed",
+    }),
     seed: "fixture-seed",
     generatedAt: new Date().toISOString(),
   });

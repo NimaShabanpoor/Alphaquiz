@@ -18,6 +18,7 @@ import type { ExamInstance } from "@/lib/quiz-types";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { readJsonBody, RequestBodyError } from "@/lib/request-body";
+import { readExamSnapshot } from "@/lib/exam-snapshot";
 
 export const runtime = "nodejs";
 
@@ -213,7 +214,7 @@ export async function POST(request: Request, context: RouteContext) {
           .select("snapshot")
           .eq("attemptId", previousAttempt.id)
           .maybeSingle();
-        previousInstance = previous?.snapshot as ExamInstance | undefined;
+        previousInstance = previous?.snapshot ? readExamSnapshot(previous.snapshot) : undefined;
       }
     }
 
@@ -221,11 +222,10 @@ export async function POST(request: Request, context: RouteContext) {
     const startedAt = new Date().toISOString();
     const access = createAttemptAccessToken();
     const instance = previousInstance
-      ? reuseExamInstance(previousInstance, attemptId, email, startedAt)
+      ? reuseExamInstance(previousInstance, attemptId, startedAt)
       : generateExamInstance({
           attemptId,
           publicationId: source.publication.id,
-          studentKey: email,
           quiz: source.quiz,
           questions: source.questions,
           topics: source.topics,
@@ -278,7 +278,6 @@ export async function POST(request: Request, context: RouteContext) {
         attemptId,
         publicationId: instance.publicationId,
         quizId: instance.quizId,
-        studentKey: instance.studentKey,
         questionOrder: instance.questionOrder,
         topicOrder: instance.topicOrder,
         answerOrderByQuestionId: instance.answerOrderByQuestionId,
