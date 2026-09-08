@@ -1,3 +1,4 @@
+import { redactedError } from "@/lib/error-redaction";
 import {
   attemptCookieName,
   isAttemptAccessTokenValid,
@@ -247,7 +248,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         .eq("status", "in-progress")
         .select("*")
         .maybeSingle();
-      if (error) throw new Error(error.message);
+      if (error) throw redactedError(error);
       if (data) updatedAttempt = data;
     }
 

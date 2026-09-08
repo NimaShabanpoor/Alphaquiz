@@ -1,3 +1,4 @@
+import { redactedError } from "@/lib/error-redaction";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -23,7 +24,7 @@ export async function sendAttemptResultEmail(
     .select("*")
     .eq("id", attemptId)
     .maybeSingle();
-  if (attemptError) throw new Error(attemptError.message);
+  if (attemptError) throw redactedError(attemptError);
   if (!attempt) throw new Error("Das Prüfungsresultat wurde nicht gefunden.");
   if (attempt.status !== "submitted" && attempt.status !== "terminated") {
     throw new Error("Die Prüfung ist noch nicht abgeschlossen.");
@@ -107,7 +108,7 @@ export async function sendAttemptResultEmail(
     .eq("id", attemptId);
 
   if (!response.ok) {
-    throw new Error(data.message ?? "E-Mail-Versand fehlgeschlagen.");
+    throw redactedError(data);
   }
   return { sent: true, configured: true, id: data.id };
 }

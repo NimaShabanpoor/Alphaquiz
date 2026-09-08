@@ -1,3 +1,4 @@
+import { redactedError } from "@/lib/error-redaction";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -24,7 +25,7 @@ export async function loadOwnedExamPublication(
     .select("id,quizId")
     .eq("id", publicationId)
     .maybeSingle();
-  if (publicationError) throw publicationError;
+  if (publicationError) throw redactedError(publicationError);
   if (!publication) return null;
 
   const quizId = String(publication.quizId);
@@ -34,7 +35,7 @@ export async function loadOwnedExamPublication(
     .eq("id", quizId)
     .eq("user_id", userId)
     .maybeSingle();
-  if (quizError) throw quizError;
+  if (quizError) throw redactedError(quizError);
   if (!ownedQuiz) return null;
 
   return { id: String(publication.id), quizId };
@@ -50,7 +51,7 @@ export async function loadOwnedExamAttempt(
     .select("id,publicationId,status,resultEmailStatus")
     .eq("id", attemptId)
     .maybeSingle();
-  if (attemptError) throw attemptError;
+  if (attemptError) throw redactedError(attemptError);
   if (!attempt) return null;
 
   const publicationId = String(attempt.publicationId);

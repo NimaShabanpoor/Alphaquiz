@@ -1,3 +1,4 @@
+import { redactedError } from "@/lib/error-redaction";
 import { requireAdmin } from "@/lib/admin-auth";
 import { databaseFailure } from "@/lib/admin-api";
 import { loadOwnedExamPublication } from "@/lib/admin-ownership";
@@ -35,7 +36,7 @@ export async function DELETE(request: Request, context: RouteContext) {
       .eq("quizId", publication.quizId)
       .select("id")
       .maybeSingle();
-    if (error) throw error;
+    if (error) throw redactedError(error);
     if (!deleted) {
       return Response.json(
         { error: "Die Prüfungsveröffentlichung wurde nicht gefunden." },

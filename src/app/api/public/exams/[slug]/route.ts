@@ -1,3 +1,4 @@
+import { redactError, redactedError } from "@/lib/error-redaction";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -259,7 +260,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (attemptError) {
       const duplicate = attemptError.code === "23505";
       if (!duplicate) {
-        console.error("[AlphaQuiz Prüfung] Versuch konnte nicht erstellt werden", attemptError);
+        console.error("[AlphaQuiz Prüfung] Versuch konnte nicht erstellt werden", redactError(attemptError));
       }
       return Response.json(
         {
@@ -288,7 +289,7 @@ export async function POST(request: Request, context: RouteContext) {
       });
     if (instanceError) {
       await supabase.client.from("exam_attempts").delete().eq("id", attemptId);
-      throw new Error(instanceError.message);
+      throw redactedError(instanceError);
     }
 
     await supabase.client.from("exam_events").insert({
@@ -313,7 +314,7 @@ export async function POST(request: Request, context: RouteContext) {
     });
     return response;
   } catch (error) {
-    console.error("[AlphaQuiz Prüfung] Start fehlgeschlagen", error);
+    console.error("[AlphaQuiz Prüfung] Start fehlgeschlagen", redactError(error));
     return Response.json(
       {
         error: "Die Prüfung konnte nicht gestartet werden.",

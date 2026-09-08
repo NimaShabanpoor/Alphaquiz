@@ -1,3 +1,4 @@
+import { redactedError } from "@/lib/error-redaction";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -29,7 +30,7 @@ async function upsertRows(
   const { error } = await client
     .from(table)
     .upsert(rows, { onConflict, ignoreDuplicates: false });
-  if (error) throw error;
+  if (error) throw redactedError(error);
 }
 
 async function deleteMissingIds(
@@ -39,14 +40,14 @@ async function deleteMissingIds(
   currentIds: string[],
 ) {
   const { data, error } = await client.from(table).select("id");
-  if (error) throw error;
+  if (error) throw redactedError(error);
   const current = new Set(currentIds);
   const missing = (data ?? [])
     .map((row) => String(row.id))
     .filter((id) => !current.has(id));
   if (!missing.length) return;
   const { error: deleteError } = await client.from(table).delete().in("id", missing);
-  if (deleteError) throw deleteError;
+  if (deleteError) throw redactedError(deleteError);
   console.info("[AlphaQuiz Datenlöschung] Vollersatz hat Datensätze gelöscht", {
     type: table,
     count: missing.length,
@@ -69,7 +70,7 @@ async function replaceQuizQuestionLinks(
   const { data, error } = await client
     .from("quiz_questions")
     .select("quizId,questionId");
-  if (error) throw error;
+  if (error) throw redactedError(error);
   const current = new Set(links.map((link) => `${link.quizId}\u0000${link.questionId}`));
   for (const row of data ?? []) {
     const quizId = String(row.quizId);
@@ -80,7 +81,7 @@ async function replaceQuizQuestionLinks(
       .delete()
       .eq("quizId", quizId)
       .eq("questionId", questionId);
-    if (deleteError) throw deleteError;
+    if (deleteError) throw redactedError(deleteError);
   }
   await upsertRows(client, "quiz_questions", links, "quizId,questionId");
 }

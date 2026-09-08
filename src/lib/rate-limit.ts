@@ -1,3 +1,4 @@
+import { redactError, redactedError } from "@/lib/error-redaction";
 import "server-only";
 
 import { createHash, createHmac } from "node:crypto";
@@ -89,7 +90,7 @@ export async function checkRateLimit(
     key = createRateLimitKey(request, scope);
   } catch (error) {
     if (!(error instanceof MissingTrustedClientAddressError)) throw error;
-    console.error("[AlphaQuiz Rate Limit] Anfrage geschlossen abgelehnt", error);
+    console.error("[AlphaQuiz Rate Limit] Anfrage geschlossen abgelehnt", redactError(error));
     return { allowed: false, retryAfter: 60, unavailable: true };
   }
 
@@ -131,7 +132,7 @@ async function checkRateLimitKey(
       p_limit: limit,
       p_window_seconds: Math.ceil(windowMs / 1000),
     });
-    if (error) throw error;
+    if (error) throw redactedError(error);
 
     const result = Array.isArray(data) ? data[0] : data;
     if (
@@ -148,7 +149,7 @@ async function checkRateLimitKey(
   } catch (error) {
     console.error(
       "[AlphaQuiz Rate Limit] Dauerhafte Drosselung nicht verfügbar",
-      error,
+      redactError(error),
     );
     if (process.env.NODE_ENV !== "production") {
       return checkDevelopmentBucket(

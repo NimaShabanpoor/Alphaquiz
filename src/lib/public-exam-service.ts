@@ -1,3 +1,4 @@
+import { redactedError } from "@/lib/error-redaction";
 import "server-only";
 import { readExamSnapshot } from "@/lib/exam-snapshot";
 
@@ -20,8 +21,8 @@ export async function loadStoredAttempt(
       .eq("attemptId", attemptId)
       .maybeSingle(),
   ]);
-  if (attemptResult.error) throw new Error(attemptResult.error.message);
-  if (instanceResult.error) throw new Error(instanceResult.error.message);
+  if (attemptResult.error) throw redactedError(attemptResult.error);
+  if (instanceResult.error) throw redactedError(instanceResult.error);
   if (!attemptResult.data || !instanceResult.data?.snapshot) return null;
   return {
     attempt: attemptResult.data as StoredExamAttempt,
@@ -57,7 +58,7 @@ export async function finalizeStoredAttempt(
     .eq("status", "in-progress")
     .select("*")
     .maybeSingle();
-  if (updateError) throw new Error(updateError.message);
+  if (updateError) throw redactedError(updateError);
 
   if (!updated) {
     const stored = await loadStoredAttempt(client, String(attempt.id));
@@ -75,7 +76,7 @@ export async function finalizeStoredAttempt(
         : "Prüfung abgegeben",
     createdAt: submittedAt,
   });
-  if (eventError) throw new Error(eventError.message);
+  if (eventError) throw redactedError(eventError);
 
   const { data: publication } = await client
     .from("exam_publications")
@@ -158,7 +159,7 @@ export async function recordViolation(
       .select("violationCount,status")
       .eq("id", attemptId)
       .maybeSingle();
-    if (readError) throw new Error(readError.message);
+    if (readError) throw redactedError(readError);
     if (!current || current.status !== "in-progress") return current;
 
     const previousCount = Number(current.violationCount) || 0;
@@ -174,7 +175,7 @@ export async function recordViolation(
       .eq("violationCount", previousCount)
       .select("*")
       .maybeSingle();
-    if (updateError) throw new Error(updateError.message);
+    if (updateError) throw redactedError(updateError);
     if (!updated) continue;
 
     const { error: eventError } = await client.from("exam_events").insert({
@@ -185,7 +186,7 @@ export async function recordViolation(
       message,
       createdAt: new Date().toISOString(),
     });
-    if (eventError) throw new Error(eventError.message);
+    if (eventError) throw redactedError(eventError);
     return { ...updated, shouldTerminate: nextCount >= maxViolations };
   }
 

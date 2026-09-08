@@ -1,3 +1,4 @@
+import { redactError } from "@/lib/error-redaction";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -71,7 +72,7 @@ export async function requireAdmin(request: Request) {
     }
   } catch (error) {
     if (error instanceof AppOriginConfigurationError) {
-      console.error("[AlphaQuiz Auth] Ungültige APP_ORIGIN-Konfiguration", error);
+      console.error("[AlphaQuiz Auth] Ungültige APP_ORIGIN-Konfiguration", redactError(error));
       return {
         client: null,
         user: null,

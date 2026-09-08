@@ -1,3 +1,4 @@
+import { redactedError } from "@/lib/error-redaction";
 import { requireAdmin } from "@/lib/admin-auth";
 import { databaseFailure } from "@/lib/admin-api";
 import { loadOwnedExamAttempt } from "@/lib/admin-ownership";
@@ -46,7 +47,7 @@ export async function POST(request: Request, context: RouteContext) {
       .eq("publicationId", attempt.publicationId)
       .select("id")
       .maybeSingle();
-    if (updateError) throw updateError;
+    if (updateError) throw redactedError(updateError);
     if (!updated) {
       return Response.json(
         { error: "Der Prüfungsversuch wurde nicht gefunden." },
@@ -64,7 +65,7 @@ export async function POST(request: Request, context: RouteContext) {
         message: "Versuch durch Administrator freigegeben",
         createdAt: updatedAt,
       });
-    if (eventError) throw eventError;
+    if (eventError) throw redactedError(eventError);
 
     return Response.json({ reset: true });
   } catch (error) {

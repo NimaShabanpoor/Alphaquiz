@@ -1,3 +1,4 @@
+import { redactError } from "@/lib/error-redaction";
 import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
@@ -8,7 +9,7 @@ export async function GET(request: Request) {
   try {
     const { error } = await auth.client.from("categories").select("id").limit(1);
     if (error) {
-      console.error("[AlphaQuiz API] Supabase-Status", error);
+      console.error("[AlphaQuiz API] Supabase-Status", redactError(error));
       return Response.json(
         {
           configured: true,
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     }
     return Response.json({ configured: true, reachable: true });
   } catch (error) {
-    console.error("[AlphaQuiz API] Supabase-Status", error);
+    console.error("[AlphaQuiz API] Supabase-Status", redactError(error));
     return Response.json(
       {
         configured: true,

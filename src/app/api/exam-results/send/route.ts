@@ -1,3 +1,4 @@
+import { redactError } from "@/lib/error-redaction";
 import { requireAdmin } from "@/lib/admin-auth";
 import { loadOwnedExamAttempt } from "@/lib/admin-ownership";
 import { sendAttemptResultEmail } from "@/lib/result-email";
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     );
     return Response.json(result);
   } catch (error) {
-    console.error("[AlphaQuiz API] Ergebnis-E-Mail senden", error);
+    console.error("[AlphaQuiz API] Ergebnis-E-Mail senden", redactError(error));
     return Response.json(
       { error: "Die Ergebnis-E-Mail konnte nicht versendet werden." },
       { status: 502 },

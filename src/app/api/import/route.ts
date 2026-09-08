@@ -1,3 +1,4 @@
+import { redactError } from "@/lib/error-redaction";
 import MDBReader from "mdb-reader";
 import type { Value } from "mdb-reader";
 import type { Category, Question, QuestionType } from "@/lib/quiz-types";
@@ -360,7 +361,7 @@ export async function POST(request: Request) {
       categories: parsedCategories.data,
     });
   } catch (error) {
-    console.error("[AlphaQuiz Import] Datei konnte nicht gelesen werden", error);
+    console.error("[AlphaQuiz Import] Datei konnte nicht gelesen werden", redactError(error));
     return Response.json(
       { error: "Die Datei konnte nicht gelesen werden. Bitte prüfe das Format." },
       { status: 400 },

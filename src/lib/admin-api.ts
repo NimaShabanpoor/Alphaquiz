@@ -1,3 +1,4 @@
+import { redactError } from "@/lib/error-redaction";
 import "server-only";
 
 import type { z } from "zod";
@@ -39,7 +40,7 @@ export async function authorizeAdminMutation(request: Request) {
 }
 
 export function databaseFailure(scope: string, error: unknown) {
-  console.error(`[AlphaQuiz API] ${scope}`, error);
+  console.error(`[AlphaQuiz API] ${scope}`, redactError(error));
   return Response.json(
     { error: "Die Daten konnten nicht in Supabase gespeichert werden." },
     { status: 502 },
@@ -47,7 +48,7 @@ export function databaseFailure(scope: string, error: unknown) {
 }
 
 export function databaseReadFailure(scope: string, error: unknown) {
-  console.error(`[AlphaQuiz API] ${scope}`, error);
+  console.error(`[AlphaQuiz API] ${scope}`, redactError(error));
   return Response.json(
     { error: "Die Daten konnten nicht aus Supabase geladen werden." },
     { status: 502 },

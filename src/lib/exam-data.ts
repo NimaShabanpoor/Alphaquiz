@@ -1,3 +1,4 @@
+import { redactedError } from "@/lib/error-redaction";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -65,7 +66,7 @@ async function loadExamSource(
     .select("*")
     .eq(column, value)
     .maybeSingle();
-  if (publicationError) throw new Error(publicationError.message);
+  if (publicationError) throw redactedError(publicationError);
   if (!publicationRow) return null;
 
   const publication = normalizeExamPublication(publicationRow);
@@ -74,7 +75,7 @@ async function loadExamSource(
     .select("*")
     .eq("id", publication.quizId)
     .maybeSingle();
-  if (quizError) throw new Error(quizError.message);
+  if (quizError) throw redactedError(quizError);
   if (!quizRow) return null;
 
   const { data: links, error: linkError } = await client
@@ -82,7 +83,7 @@ async function loadExamSource(
     .select("questionId,position")
     .eq("quizId", publication.quizId)
     .order("position");
-  if (linkError) throw new Error(linkError.message);
+  if (linkError) throw redactedError(linkError);
 
   const questionIds = (links ?? []).map((link) => String(link.questionId));
   const [questionResult, answerResult] = await Promise.all([
@@ -97,8 +98,8 @@ async function loadExamSource(
           .order("position")
       : Promise.resolve({ data: [], error: null }),
   ]);
-  if (questionResult.error) throw new Error(questionResult.error.message);
-  if (answerResult.error) throw new Error(answerResult.error.message);
+  if (questionResult.error) throw redactedError(questionResult.error);
+  if (answerResult.error) throw redactedError(answerResult.error);
 
   const topicIds = [
     ...new Set(
@@ -110,7 +111,7 @@ async function loadExamSource(
   const topicResult = topicIds.length
     ? await client.from("topics").select("*").in("id", topicIds)
     : { data: [], error: null };
-  if (topicResult.error) throw new Error(topicResult.error.message);
+  if (topicResult.error) throw redactedError(topicResult.error);
 
   const answersByQuestion = new Map<string, Question["answers"]>();
   for (const answer of answerResult.data ?? []) {

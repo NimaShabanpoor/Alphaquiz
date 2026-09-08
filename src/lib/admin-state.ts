@@ -1,3 +1,4 @@
+import { redactedError } from "@/lib/error-redaction";
 import "server-only";
 import { readExamSnapshot } from "@/lib/exam-snapshot";
 
@@ -22,9 +23,9 @@ export async function loadExamActivity(client: SupabaseClient) {
       ascending: false,
     }),
   ]);
-  if (attemptResult.error) throw new Error(attemptResult.error.message);
-  if (instanceResult.error) throw new Error(instanceResult.error.message);
-  if (eventResult.error) throw new Error(eventResult.error.message);
+  if (attemptResult.error) throw redactedError(attemptResult.error);
+  if (instanceResult.error) throw redactedError(instanceResult.error);
+  if (eventResult.error) throw redactedError(eventResult.error);
 
   const instanceByAttempt = new Map(
     (instanceResult.data ?? []).map((row) => [
@@ -106,7 +107,7 @@ export async function loadAdminState(
     exportResult.error,
     publicationResult.error,
   ].filter(Boolean);
-  if (errors.length) throw new Error(errors[0]!.message);
+  if (errors.length) throw redactedError(errors[0]!);
 
   const answersByQuestion = new Map<string, Answer[]>();
   for (const row of answerResult.data ?? []) {

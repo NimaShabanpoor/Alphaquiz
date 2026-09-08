@@ -41,3 +41,46 @@ Freigabegrenzen aktiver Prüfungen bleiben davon unberührt.
 Die Integrationstests prüfen die anonyme Startseite, die öffentliche 404,
 das Dashboard für Admins und identische GET-Antworten bei unbekannten bzw.
 deaktivierten Slugs. Dies ersetzt keine visuelle Browserprüfung.
+
+## Fehlerlogs: vollständige Liste der umgestellten Stellen
+
+Die zentrale Funktion `src/lib/error-redaction.ts` erhält SQLSTATE-/PostgREST-
+Codes und gibt sichere Diagnosemeldungen aus. Ungeprüfter Meldungstext wird
+bewusst nicht erhalten: Auch `message` kann Name, E-Mail oder Zeilenwerte
+enthalten. Unbekannte Codes erhalten eine generische Meldung. `details`, `hint`,
+Abfragen, Ursachen und ursprüngliche Stacktraces werden nicht übernommen.
+
+Fehlerlogs:
+
+- `src/lib/admin-api.ts`: `databaseFailure`, `databaseReadFailure`.
+- `src/lib/admin-auth.ts`: ungültige Origin-Konfiguration.
+- `src/lib/rate-limit.ts`: fehlende vertrauenswürdige Herkunft und RPC-Ausfall.
+- `src/app/api/admin/status/route.ts`: Abfragefehler und Catch.
+- `src/app/api/import/route.ts`: Import-Catch.
+- `src/app/api/exam-results/send/route.ts`: Versand-Catch.
+- `src/app/api/public/exams/[slug]/route.ts`: fehlgeschlagener Versuch und Start-Catch.
+
+Fehlerweitergabe (vor dem Werfen werden Anbieterfehler reduziert):
+
+- `src/lib/admin-ownership.ts`: Veröffentlichung, Quiz, Versuch.
+- `src/lib/admin-resource-sync.ts`: Upsert, Bestandsabfragen, Löschungen und Quiz-Verknüpfungen.
+- `src/lib/admin-state.ts`: Versuche, Instanzen, Ereignisse und Gesamtzustand.
+- `src/lib/exam-data.ts`: Veröffentlichung, Quiz, Verknüpfungen, Fragen, Antworten und Themen.
+- `src/lib/public-exam-service.ts`: Lesen, Speichern, Abschluss und Aufsichtsereignisse.
+- `src/lib/result-email.ts`: Versuchsabfrage und externe Versandantwort.
+- `src/lib/rate-limit.ts`: Rate-Limit-RPC.
+- `src/app/api/admin/exam-attempts/[attemptId]/reset/route.ts`: Update und Ereignis.
+- `src/app/api/admin/exam-publications/[publicationId]/route.ts`: Löschung.
+- `src/app/api/public/exam-attempts/[attemptId]/route.ts`: Antwortspeicherung.
+- `src/app/api/public/exams/[slug]/route.ts`: Instanzspeicherung.
+
+Die Ressourcen-Handler für Kategorien, Themen, Fragen, Quizzes, Exporte,
+Veröffentlichungen, Aktivität und Gesamtzustand reichen gefangene Fehler an
+`databaseFailure` bzw. `databaseReadFailure` weiter; dort wird vor jedem Log
+redigiert. Die öffentlichen Antworttexte bleiben generisch.
+
+Bewusst getrennt: feste eigene Validierungs-/Konfigurationsmeldungen sind keine
+ungeprüften Anbieterfehler. Das CSP-Protokoll schreibt strukturierte,
+bereits begrenzte Meldungen, keine Fehlerobjekte. Das angeforderte Löschprotokoll
+enthält weiterhin Typ, Anzahl, Admin-user_id und Zeit. Bestehende Providerlogs,
+Backups oder bereits aufgezeichnete Meldungen werden hierdurch nicht gelöscht.
