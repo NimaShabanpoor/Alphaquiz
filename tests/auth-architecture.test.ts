@@ -21,6 +21,7 @@ const protectedRouteHandlers = [
   "src/app/api/admin/exam-attempts/[attemptId]/reset/route.ts",
   "src/app/api/admin/exports/route.ts",
   "src/app/api/admin/questions/route.ts",
+  "src/app/api/admin/retention/route.ts",
   "src/app/api/admin/quizzes/route.ts",
   "src/app/api/admin/state/route.ts",
   "src/app/api/admin/status/route.ts",

@@ -84,3 +84,36 @@ ungeprüften Anbieterfehler. Das CSP-Protokoll schreibt strukturierte,
 bereits begrenzte Meldungen, keine Fehlerobjekte. Das angeforderte Löschprotokoll
 enthält weiterhin Typ, Anzahl, Admin-user_id und Zeit. Bestehende Providerlogs,
 Backups oder bereits aufgezeichnete Meldungen werden hierdurch nicht gelöscht.
+
+## Konfigurierbare Aufbewahrungslöschung
+
+Die Mechanik ist standardmässig inaktiv. Nur positive, ganze Tageswerte in den
+folgenden Server-Variablen aktivieren den jeweiligen Teil:
+
+- `EXAM_RESULT_RETENTION_DAYS`: löscht abgeschlossene `exam_attempts`, deren
+  `submittedAt` vor dem Stichtag liegt. Datenbank-Cascades löschen die zugehörigen
+  `exam_instances` und `exam_events`.
+- `EXAM_SUPERVISION_RETENTION_DAYS`: löscht `exam_events` abgeschlossener
+  Versuche vor dem Stichtag, ohne Resultat und Prüfungsinstanz zu löschen.
+
+Fehlt eine Variable, wird ihr Teil nicht ausgeführt. Ungültige Werte führen zu
+einem Fehler und aktivieren keine Löschung. Laufende Versuche und Versuche ohne
+Abschlusszeit werden nie ausgewählt. Stichtage werden in
+`src/lib/exam-retention-policy.ts` ohne Datenbankzugriff berechnet; nur
+`src/lib/exam-retention.ts` greift auf Supabase zu und bleibt mit `server-only`
+gegen die Verwendung in Client-Komponenten geschützt.
+
+Ausgelöst wird die Löschung mit `POST /api/admin/retention` aus einer gültigen
+Admin-Sitzung und mit gültigem `Origin`-Header. Es existiert bewusst weder ein
+Frontend-Schalter noch ein automatischer Zeitplan. Für den späteren Betrieb muss
+der Verantwortliche Fristen festlegen, die Variablen serverseitig setzen und
+einen authentifizierten Auslöser planen. Der Endpunkt antwortet mit der Zahl der
+gelöschten Versuche, Instanzen und Ereignisse.
+
+Nicht erreicht werden zugestellte E-Mails, Datenbank-/Provider-Backups,
+heruntergeladene Exporte sowie Kopien ausserhalb dieser Datenbank. Die separate
+Aufsichtsfrist löscht die detaillierten Ereignisse, nicht den aggregierten
+`violationCount` oder den Abschlussstatus im Ergebnisdatensatz; diese verschwinden
+mit der Resultatfrist. Ob diese Zusammenfassung ebenfalls früher anonymisiert
+werden muss, ist vor der Verarbeitung echter Schülerdaten organisatorisch zu
+entscheiden.

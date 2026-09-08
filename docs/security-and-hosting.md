@@ -109,6 +109,13 @@ Production-Environment-Variablen gesetzt und geprüft sein. Das Entfernen eines
 Alias deaktiviert die Git-Integration nicht. Änderungen vor der Freigabe über
 einen separaten Branch als Preview prüfen.
 
+Die optionale Aufbewahrungslöschung ist ohne
+`EXAM_RESULT_RETENTION_DAYS` und `EXAM_SUPERVISION_RETENTION_DAYS` vollständig
+inaktiv. Beide Werte sind positive ganze Tageszahlen und werden je Umgebung
+separat gesetzt. Ihre fachlichen Fristen werden erst durch den Verantwortlichen
+festgelegt; Details zur Wirkung und manuellen Auslösung stehen in
+`docs/privacy-followups.md`.
+
 ## Hostpoint
 
 Die App erzeugt mit `output: "standalone"` einen portablen Node.js-Server.

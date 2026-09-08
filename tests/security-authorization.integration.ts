@@ -598,7 +598,11 @@ before(async () => {
     createdAt: new Date().toISOString(),
   });
 
-  appProcess = await startServer({ ADMIN_EMAIL: adminEmail, VERCEL: "1" });
+  appProcess = await startServer({
+    ADMIN_EMAIL: adminEmail, VERCEL: "1",
+    EXAM_RESULT_RETENTION_DAYS: "36500",
+    EXAM_SUPERVISION_RETENTION_DAYS: "30000",
+  });
   await assertServerCanReachSupabase();
 });
 
@@ -632,6 +636,7 @@ after(async () => {
 });
 
 const unauthenticatedEndpoints = [
+  ["Aufbewahrungslöschung", "/api/admin/retention", "POST", undefined],
   ["Kategorien", "/api/admin/categories", "PUT", { categories: [] }],
   ["Unterkategorien", "/api/admin/topics", "PUT", { topics: [] }],
   ["Fragen", "/api/admin/questions", "PUT", { questions: [] }],
@@ -1242,6 +1247,50 @@ test("Cross-Site-Logout wird abgelehnt", async () => {
     },
   });
   await assertNoDataResponse(response, 403);
+});
+
+test("konfigurierte Aufbewahrung trennt Resultat- und Aufsichtsdaten", async () => {
+  const resultAttempt = `retention-result-${runId}`;
+  const supervisionAttempt = `retention-supervision-${runId}`;
+  const baseInstance = await serviceClient.from("exam_instances").select("snapshot").eq("id", ids.instance).single();
+  assert.ifError(baseInstance.error);
+  await insertFixture("exam_attempts", [
+    { id: resultAttempt, publicationId: ids.publication, name: "Result Retention", email: `result-${runId}@example.invalid`, status: "submitted", startedAt: "1800-01-01T00:00:00Z", submittedAt: "1800-01-01T01:00:00Z" },
+    { id: supervisionAttempt, publicationId: ids.publication, name: "Supervision Retention", email: `supervision-${runId}@example.invalid`, status: "submitted", startedAt: "1935-01-01T00:00:00Z", submittedAt: "1935-01-01T01:00:00Z" },
+  ]);
+  for (const attemptId of [resultAttempt, supervisionAttempt]) {
+    await insertFixture("exam_instances", {
+      id: `instance-${attemptId}`, attemptId, publicationId: ids.publication, quizId: ids.quiz,
+      questionOrder: [ids.question], topicOrder: [ids.topic],
+      answerOrderByQuestionId: { [ids.question]: [ids.answer] },
+      snapshot: { ...(baseInstance.data?.snapshot as JsonObject), id: `instance-${attemptId}`, attemptId },
+      seed: `seed-${attemptId}`, generatedAt: "1935-01-01T00:00:00Z",
+    });
+    await insertFixture("exam_events", {
+      id: `event-${attemptId}`, publicationId: ids.publication, attemptId,
+      type: "tab-hidden", message: "Retention fixture", createdAt: "1935-01-01T00:30:00Z",
+    });
+  }
+
+  try {
+    const response = await request("/api/admin/retention", { method: "POST" }, adminCookie);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { active: true, attempts: 1, instances: 1, events: 2 });
+
+    const removed = await serviceClient.from("exam_attempts").select("id").eq("id", resultAttempt).maybeSingle();
+    assert.ifError(removed.error);
+    assert.equal(removed.data, null);
+    const retained = await serviceClient.from("exam_attempts").select("id").eq("id", supervisionAttempt).single();
+    assert.ifError(retained.error);
+    assert.equal(retained.data.id, supervisionAttempt);
+    const retainedInstance = await serviceClient.from("exam_instances").select("id").eq("attemptId", supervisionAttempt).single();
+    assert.ifError(retainedInstance.error);
+    const removedEvent = await serviceClient.from("exam_events").select("id").eq("attemptId", supervisionAttempt);
+    assert.ifError(removedEvent.error);
+    assert.deepEqual(removedEvent.data, []);
+  } finally {
+    await serviceClient.from("exam_attempts").delete().in("id", [resultAttempt, supervisionAttempt]);
+  }
 });
 
 test("gültiger Nicht-Admin-Login endet im 403-Pfad", async () => {

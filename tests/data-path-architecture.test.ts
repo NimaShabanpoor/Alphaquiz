@@ -58,6 +58,7 @@ test("Admin-Datenzugriffe verwenden den request-scoped User-Client", () => {
     "src/app/api/admin/exam-publications/route.ts",
     "src/app/api/exam-results/send/route.ts",
     "src/app/api/admin/exam-attempts/[attemptId]/reset/route.ts",
+    "src/app/api/admin/retention/route.ts",
   ];
 
   for (const route of adminRoutes) {
