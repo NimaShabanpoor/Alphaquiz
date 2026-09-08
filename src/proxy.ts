@@ -6,30 +6,9 @@ import {
   CSP_REPORT_PATH,
 } from "@/lib/content-security-policy";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
+import { isAdminPagePath } from "@/lib/admin-page-path";
 
 const SESSION_HEADER_NAMES = ["cache-control", "expires", "pragma"] as const;
-const PROTECTED_PAGE_ROOTS = [
-  "/quizzes",
-  "/questions",
-  "/categories",
-  "/exams",
-  "/exam-activity",
-  "/exam-results",
-  "/import",
-  "/export",
-  "/preview",
-  "/settings",
-] as const;
-
-function isProtectedPage(pathname: string) {
-  return (
-    pathname === "/" ||
-    PROTECTED_PAGE_ROOTS.some(
-      (root) => pathname === root || pathname.startsWith(`${root}/`),
-    )
-  );
-}
-
 function createPageResponse(requestHeaders: Headers) {
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
@@ -117,7 +96,7 @@ export async function proxy(request: NextRequest) {
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy-Report-Only", policy);
 
-  if (!isProtectedPage(request.nextUrl.pathname)) {
+  if (request.nextUrl.pathname === "/" || !isAdminPagePath(request.nextUrl.pathname)) {
     return applyContentSecurityPolicy(
       createPageResponse(requestHeaders),
       policy,

@@ -24,3 +24,20 @@ Migration und Anwendung müssen koordiniert ausgerollt werden: alte Writer mit
 kann vor der Migration wegen der alten NOT-NULL-Spalte keine Instanz anlegen.
 Die echte Dev-Datenbank wird durch diese Codeänderung nicht automatisch verändert.
 F5 und `candidate_identities` bleiben bis zur Produktentscheidung offen.
+
+## Öffentlicher Einstieg
+
+Die Startseite zeigt ohne Sitzung nur den Hinweis auf den Prüfungslink der
+Prüfungsleitung. Ohne Supabase-Sitzungscookie wird kein Supabase-Client
+initialisiert. Bei vorhandenen Sitzungscookies wird die Adminberechtigung
+serverseitig geprüft; nur berechtigte Admins erhalten das bisherige Dashboard.
+Öffentliche Seiten binden den Admin-Datenprovider nicht ein.
+
+Unbekannte öffentliche Pfade haben eine eigene neutrale Fehlerseite. Der
+öffentliche Prüfungsendpunkt beantwortet unbekannte und deaktivierte Slugs
+gleichermassen mit 404 und demselben Fehlertext (GET und POST). Zeitliche
+Freigabegrenzen aktiver Prüfungen bleiben davon unberührt.
+
+Die Integrationstests prüfen die anonyme Startseite, die öffentliche 404,
+das Dashboard für Admins und identische GET-Antworten bei unbekannten bzw.
+deaktivierten Slugs. Dies ersetzt keine visuelle Browserprüfung.

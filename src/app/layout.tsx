@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
-import { AppProvider } from "@/components/app-provider";
-import AppShell from "@/components/app-shell";
+import PageFrame from "@/components/page-frame";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -29,9 +28,7 @@ export default async function RootLayout({
   return (
     <html data-scroll-behavior="smooth" lang="de-CH">
       <body>
-        <AppProvider>
-          <AppShell>{children}</AppShell>
-        </AppProvider>
+        <PageFrame>{children}</PageFrame>
       </body>
     </html>
   );

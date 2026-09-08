@@ -986,6 +986,43 @@ test("g) der öffentliche Prüfungsaufruf liefert keine Antwortschlüssel", asyn
   assert.doesNotMatch(source, /Secret correct answer/);
 });
 
+test("öffentliche Startseite zeigt weder Anmeldung noch Adminbereich", async () => {
+  const response = await request("/", { redirect: "manual" });
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Prüfungslink deiner Prüfungsleitung/);
+  assert.doesNotMatch(html, /<form|href="\/login"|Hauptnavigation|Werner Hutter|Sicher anmelden/);
+});
+
+test("unbekannte öffentliche Seite bleibt eine neutrale 404", async () => {
+  const response = await request(`/missing-${runId}`, { redirect: "manual" });
+  assert.equal(response.status, 404);
+  const html = await response.text();
+  assert.match(html, /Seite nicht gefunden/);
+  assert.doesNotMatch(html, /<form|href="\/login"|Hauptnavigation/);
+});
+
+test("angemeldeter Admin erhält weiterhin das Dashboard auf der Startseite", async () => {
+  const response = await request("/", {}, adminCookie);
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /Hauptnavigation/);
+});
+
+test("ungültiger und deaktivierter Slug liefern beim Abruf identische 404", async () => {
+  const update = await serviceClient.from("exam_publications").update({ active: false }).eq("id", ids.publication);
+  assert.ifError(update.error);
+  try {
+    const inactive = await request(`/api/public/exams/${slug}`);
+    const missing = await request(`/api/public/exams/missing-${runId}`);
+    assert.equal(inactive.status, 404);
+    assert.equal(missing.status, 404);
+    assert.deepEqual(await inactive.json(), await missing.json());
+  } finally {
+    const restore = await serviceClient.from("exam_publications").update({ active: true }).eq("id", ids.publication);
+    assert.ifError(restore.error);
+  }
+});
+
 test("F7: der öffentliche Prüfungsabruf wird pro Netzwerkherkunft gedrosselt", async () => {
   const address = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
   for (let index = 0; index < 20; index += 1) {

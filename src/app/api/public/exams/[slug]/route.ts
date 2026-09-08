@@ -81,7 +81,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   try {
     const source = await loadExamSourceBySlug(supabase.client, slug);
-    if (!source) {
+    if (!source || !source.publication.active) {
       return Response.json(
         { error: "Prüfung nicht gefunden." },
         { status: 404 },
@@ -149,7 +149,7 @@ export async function POST(request: Request, context: RouteContext) {
     const { name, email } = parsed.data;
 
     const source = await loadExamSourceBySlug(supabase.client, slug);
-    if (!source) {
+    if (!source || !source.publication.active) {
       return Response.json(
         { error: "Prüfung nicht gefunden." },
         { status: 404 },
